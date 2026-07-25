@@ -1,0 +1,343 @@
+digraph MysteryMalaysiaERD {
+  graph [
+    label="Mystery Malaysia - Complete Supabase ERD (30 application tables)"
+    labelloc="t"
+    labeljust="c"
+    fontsize=28
+    fontname="Arial Bold"
+    rankdir=LR
+    bgcolor="#F8FAFC"
+    pad=0.35
+    nodesep=0.35
+    ranksep=1.1
+    splines=polyline
+    compound=true
+    newrank=true
+  ];
+
+  node [
+    shape=Mrecord
+    style="filled,rounded"
+    color="#475569"
+    penwidth=1.2
+    fontname="Arial"
+    fontsize=11
+    margin="0.12,0.08"
+  ];
+
+  edge [
+    color="#64748B"
+    penwidth=1.1
+    arrowsize=0.7
+    fontname="Arial"
+    fontsize=9
+    fontcolor="#334155"
+  ];
+
+  auth_users [
+    label="{auth.users (Supabase managed)|PK id\lemail\lphone\lauthentication data\l}"
+    fillcolor="#E2E8F0"
+    color="#0F172A"
+    penwidth=2
+  ];
+
+  subgraph cluster_user {
+    label="USER AND PROFILE";
+    color="#60A5FA";
+    fillcolor="#EFF6FF";
+    style="rounded,filled";
+    fontname="Arial Bold";
+    fontsize=16;
+
+    profiles [
+      label="{profiles|PK/FK id → auth.users\lusername (unique)\ldisplay_name\lavatar_path\lprofile_visibility\l}"
+      fillcolor="#DBEAFE"
+    ];
+  }
+
+  subgraph cluster_discovery {
+    label="MISSION DISCOVERY";
+    color="#F59E0B";
+    fillcolor="#FFFBEB";
+    style="rounded,filled";
+    fontname="Arial Bold";
+    fontsize=16;
+
+    destinations [
+      label="{destinations|PK id\lexternal_place_id (unique)\lname, state, city\llatitude, longitude\lcategories, availability\l}"
+      fillcolor="#FEF3C7"
+    ];
+
+    destination_clues [
+      label="{destination_clues [SERVER ONLY]|PK/FK destination_id → destinations\lclue_type, title, prompt\laccepted_answers\lvalidation_rules\lhint_text (0..1)\l}"
+      fillcolor="#FDE68A"
+      color="#B45309"
+      penwidth=2
+    ];
+
+    mission_templates [
+      label="{mission_templates [SERVER ONLY]|PK id\ltitle, theme, difficulty\lminimum_stops, maximum_stops\lduration and budget ranges\l}"
+      fillcolor="#FDE68A"
+      color="#B45309"
+      penwidth=2
+    ];
+
+    mission_requests [
+      label="{mission_requests|PK id\lFK user_id → auth.users\lorigin coordinates\lbudget, time, distance\lcategories, group_type\lstatus\l}"
+      fillcolor="#FEF3C7"
+    ];
+
+    mission_recommendations [
+      label="{mission_recommendations|PK id\lFK request_id → mission_requests\ltitle, story_hook, explanation\lestimates, difficulty, rank\lUQ request_id + rank\l}"
+      fillcolor="#FEF3C7"
+    ];
+
+    recommendation_stops [
+      label="{mission_recommendation_stops [SERVER ONLY]|PK recommendation_id + stop_number\lFK recommendation_id\lFK destination_id → destination_clues\lFK template_id → mission_templates\lUQ recommendation + destination\l}"
+      fillcolor="#FDE68A"
+      color="#B45309"
+      penwidth=2
+    ];
+
+    recommendation_events [
+      label="{recommendation_events [SERVER ONLY]|PK id\lFK request_id\lFK recommendation_id\levent_type\lai_model, prompt_version, payload\l}"
+      fillcolor="#FDE68A"
+      color="#B45309"
+      penwidth=2
+    ];
+  }
+
+  subgraph cluster_mission {
+    label="ACTIVE MISSION";
+    color="#F97316";
+    fillcolor="#FFF7ED";
+    style="rounded,filled";
+    fontname="Arial Bold";
+    fontsize=16;
+
+    mission_sessions [
+      label="{mission_sessions|PK id\lFK recommendation_id (unique)\ltitle, mode, travel_type\lstatus, current_stage\llifecycle timestamps\l}"
+      fillcolor="#FFEDD5"
+    ];
+
+    current_missions [
+      label="{user_current_missions|PK/FK user_id → auth.users\lFK session_id → mission_sessions\lFK session_id + user_id → participants\l}"
+      fillcolor="#FFEDD5"
+    ];
+
+    mission_stages [
+      label="{mission_stages|PK id\lFK session_id\lstage_number\lstatus\lunlocked_at, completed_at\lUQ session + stage_number\l}"
+      fillcolor="#FFEDD5"
+    ];
+
+    stage_secrets [
+      label="{mission_stage_secrets [SERVER ONLY]|PK/FK stage_id\lFK session_id\lFK destination_id → destination_clues\larrival coordinates and radius\lUQ session + destination\l}"
+      fillcolor="#FED7AA"
+      color="#C2410C"
+      penwidth=2
+    ];
+
+    verified_visits [
+      label="{verified_visits|PK id\lFK stage_id + session_id\lFK session_id + user_id\lverified coordinates\lGPS accuracy, distance, time\lUQ stage + user\l}"
+      fillcolor="#FFEDD5"
+    ];
+
+    session_events [
+      label="{mission_session_events|PK id\lFK session_id\lFK actor_id → auth.users\levent_type, payload, created_at\l}"
+      fillcolor="#FFEDD5"
+    ];
+  }
+
+  subgraph cluster_clue {
+    label="CLUE AND HINT";
+    color="#A855F7";
+    fillcolor="#FAF5FF";
+    style="rounded,filled";
+    fontname="Arial Bold";
+    fontsize=16;
+
+    clue_reveals [
+      label="{mission_clue_reveals|PK/FK stage_id\lclue_type, title, prompt\loptions, media_path\lrevealed_at\l}"
+      fillcolor="#F3E8FF"
+    ];
+
+    hint_reveals [
+      label="{clue_hint_reveals|PK stage_id + user_id\lFK stage_id\lFK user_id → auth.users\lrevealed_text, xp_cost\lrequested_at\l}"
+      fillcolor="#F3E8FF"
+    ];
+
+    clue_progress [
+      label="{clue_progress|PK stage_id + user_id\lFK stage_id\lFK user_id → auth.users\lstatus, attempts\lhint_used, solved_at\l}"
+      fillcolor="#F3E8FF"
+    ];
+  }
+
+  subgraph cluster_collaboration {
+    label="COLLABORATIVE TRAVEL";
+    color="#14B8A6";
+    fillcolor="#F0FDFA";
+    style="rounded,filled";
+    fontname="Arial Bold";
+    fontsize=16;
+
+    participants [
+      label="{mission_participants|PK session_id + user_id\lFK session_id\lFK user_id → auth.users\lrole, ready, status\ljoined_at, completed_at\l}"
+      fillcolor="#CCFBF1"
+    ];
+
+    participant_locations [
+      label="{participant_locations|PK/FK session_id + user_id\llatitude, longitude\laccuracy_metres\lrecorded_at\l}"
+      fillcolor="#CCFBF1"
+    ];
+
+    invitations [
+      label="{invitations|PK id\lFK session_id\lFK inviter_id + session_id → participants\lFK invitee_id → auth.users\lstatus, expiry, response\lUQ session + invitee\l}"
+      fillcolor="#CCFBF1"
+    ];
+
+    mission_messages [
+      label="{mission_messages|PK id\lFK session_id + sender_id → participants\lmessage_type, body\lcreated_at\l}"
+      fillcolor="#CCFBF1"
+    ];
+  }
+
+  subgraph cluster_rewards {
+    label="PASSPORT, REWARDS AND DIARY";
+    color="#22C55E";
+    fillcolor="#F0FDF4";
+    style="rounded,filled";
+    fontname="Arial Bold";
+    fontsize=16;
+
+    stamp_definitions [
+      label="{stamp_definitions|PK id\lFK destination_id (unique)\lname, artwork_path, rarity\l}"
+      fillcolor="#DCFCE7"
+    ];
+
+    user_stamps [
+      label="{user_stamps|PK user_id + stamp_id\lFK user_id → auth.users\lFK stamp_id + destination_id\lFK stage + session + destination\learned_at\l}"
+      fillcolor="#DCFCE7"
+    ];
+
+    badge_definitions [
+      label="{badge_definitions|PK id\lcode (unique)\lname, description, criteria\lactive\l}"
+      fillcolor="#DCFCE7"
+    ];
+
+    user_badges [
+      label="{user_badges|PK user_id + badge_id\lFK user_id → auth.users\lFK badge_id\lFK session_id\learned_at\l}"
+      fillcolor="#DCFCE7"
+    ];
+
+    xp_ledger [
+      label="{xp_ledger|PK id\lFK user_id → auth.users\lFK session_id\lFK stage_id + session_id\lamount, reason, created_at\l}"
+      fillcolor="#DCFCE7"
+    ];
+
+    reflections [
+      label="{reflections|PK id\lFK user_id → auth.users\lFK session_id\lmood, moments, rating, photos\lUQ user + session\l}"
+      fillcolor="#DCFCE7"
+    ];
+
+    diary_entries [
+      label="{diary_entries|PK id\lFK session_id\lFK owner_user_id → auth.users\ldiary_type, content, visibility\lai_model, prompt_version\l}"
+      fillcolor="#DCFCE7"
+    ];
+  }
+
+  subgraph cluster_infrastructure {
+    label="SHARED INFRASTRUCTURE";
+    color="#64748B";
+    fillcolor="#F8FAFC";
+    style="rounded,filled";
+    fontname="Arial Bold";
+    fontsize=16;
+
+    notifications [
+      label="{notifications|PK id\lFK user_id → auth.users\ltype, title, body, data\lread_at, created_at\l}"
+      fillcolor="#E2E8F0"
+    ];
+
+    command_receipts [
+      label="{command_receipts [SERVER ONLY]|PK request_id\lFK user_id → auth.users\lcommand_name, result\lcreated_at\l}"
+      fillcolor="#CBD5E1"
+      color="#334155"
+      penwidth=2
+    ];
+  }
+
+  legend [
+    shape=note
+    label="LEGEND\lPK = Primary Key\lFK = Foreign Key\lUQ = Unique constraint\l1 : 0..1 = optional one\l1 : 0..* = zero or many\l1 : 1..* = one or many\l[SERVER ONLY] = no authenticated-client grant\lDashed line = protected copy/data derivation\l"
+    fillcolor="#FFFFFF"
+    color="#475569"
+    fontsize=11
+  ];
+
+  auth_users -> profiles [label="1 : 1"];
+  auth_users -> mission_requests [label="1 : 0..*"];
+  auth_users -> participants [label="1 : 0..*"];
+  auth_users -> current_missions [label="1 : 0..1"];
+  auth_users -> hint_reveals [label="1 : 0..*"];
+  auth_users -> clue_progress [label="1 : 0..*"];
+  auth_users -> participant_locations [label="1 : 0..*"];
+  auth_users -> verified_visits [label="1 : 0..*"];
+  auth_users -> invitations [label="invitee 1 : 0..*"];
+  auth_users -> session_events [label="actor 1 : 0..*"];
+  auth_users -> user_stamps [label="1 : 0..*"];
+  auth_users -> user_badges [label="1 : 0..*"];
+  auth_users -> xp_ledger [label="1 : 0..*"];
+  auth_users -> reflections [label="1 : 0..*"];
+  auth_users -> diary_entries [label="owner 1 : 0..*"];
+  auth_users -> notifications [label="1 : 0..*"];
+  auth_users -> command_receipts [label="1 : 0..*"];
+
+  destinations -> destination_clues [label="1 : 0..1"];
+  destinations -> stamp_definitions [label="1 : 0..1"];
+  destination_clues -> recommendation_stops [label="1 : 0..*"];
+  mission_templates -> recommendation_stops [label="1 : 0..*"];
+  mission_requests -> mission_recommendations [label="1 : 0..3"];
+  mission_requests -> recommendation_events [label="1 : 0..*"];
+  mission_recommendations -> recommendation_stops [label="1 : 1..*"];
+  mission_recommendations -> recommendation_events [label="1 : 0..*"];
+  mission_recommendations -> mission_sessions [label="0..1 : 0..1"];
+
+  mission_sessions -> participants [label="1 : 1..*"];
+  mission_sessions -> current_missions [label="1 : 0..*"];
+  mission_sessions -> mission_stages [label="1 : 1..*"];
+  mission_sessions -> participant_locations [label="1 : 0..*"];
+  mission_sessions -> verified_visits [label="1 : 0..*"];
+  mission_sessions -> session_events [label="1 : 0..*"];
+  mission_sessions -> invitations [label="1 : 0..*"];
+  mission_sessions -> mission_messages [label="1 : 0..*"];
+  mission_sessions -> user_stamps [label="1 : 0..*"];
+  mission_sessions -> user_badges [label="1 : 0..*"];
+  mission_sessions -> xp_ledger [label="1 : 0..*"];
+  mission_sessions -> reflections [label="1 : 0..*"];
+  mission_sessions -> diary_entries [label="1 : 0..*"];
+
+  participants -> current_missions [label="1 : 0..1"];
+  participants -> participant_locations [label="1 : 0..1"];
+  participants -> verified_visits [label="1 : 0..*"];
+  participants -> invitations [label="inviter 1 : 0..*"];
+  participants -> mission_messages [label="sender 1 : 0..*"];
+
+  mission_stages -> stage_secrets [label="1 : 1"];
+  destination_clues -> stage_secrets [label="1 : 0..*"];
+  mission_stages -> clue_reveals [label="1 : 0..1"];
+  destination_clues -> clue_reveals [
+    label="safe copy"
+    style=dashed
+    color="#A855F7"
+  ];
+  mission_stages -> hint_reveals [label="1 : 0..*"];
+  mission_stages -> clue_progress [label="1 : 0..*"];
+  mission_stages -> verified_visits [label="1 : 0..*"];
+  stage_secrets -> user_stamps [label="1 : 0..*"];
+  mission_stages -> xp_ledger [label="1 : 0..*"];
+
+  stamp_definitions -> user_stamps [label="1 : 0..*"];
+  badge_definitions -> user_badges [label="1 : 0..*"];
+
+  { rank=same; auth_users; legend; }
+}
