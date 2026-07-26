@@ -14,8 +14,8 @@ class SignInView extends StatefulWidget {
 
 class _SignInViewState extends State<SignInView> {
   final controller = AuthenticationController();
-  final email = TextEditingController(text: 'aina@example.com');
-  final password = TextEditingController(text: 'Malaysia123!');
+  final email = TextEditingController();
+  final password = TextEditingController();
 
   @override
   void dispose() {
@@ -105,15 +105,29 @@ class _SignInViewState extends State<SignInView> {
                   SizedBox(
                     width: double.infinity,
                     child: FilledButton(
-                      onPressed: () {
-                        if (controller.validateSignIn(
-                          email.text,
-                          password.text,
-                        )) {
-                          Navigator.pushReplacementNamed(context, '/home');
-                        }
-                      },
-                      child: const Text('Sign in'),
+                      onPressed: controller.isLoading
+                          ? null
+                          : () async {
+                              final signedIn = await controller.signIn(
+                                email.text,
+                                password.text,
+                              );
+                              if (signedIn && context.mounted) {
+                                Navigator.pushReplacementNamed(
+                                  context,
+                                  '/home',
+                                );
+                              }
+                            },
+                      child: controller.isLoading
+                          ? const SizedBox.square(
+                              dimension: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text('Sign in'),
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -149,15 +163,16 @@ class _SignInViewState extends State<SignInView> {
   }
 
   void _showResetSheet(BuildContext context) {
+    final resetEmail = TextEditingController(text: email.text);
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (context) => Padding(
+      builder: (sheetContext) => Padding(
         padding: EdgeInsets.fromLTRB(
           24,
           24,
           24,
-          MediaQuery.viewInsetsOf(context).bottom + 28,
+          MediaQuery.viewInsetsOf(sheetContext).bottom + 28,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -165,13 +180,15 @@ class _SignInViewState extends State<SignInView> {
           children: [
             Text(
               'Reset your password',
-              style: Theme.of(context).textTheme.titleLarge,
+              style: Theme.of(sheetContext).textTheme.titleLarge,
             ),
             const SizedBox(height: 8),
             const Text('We will send a secure reset link to your email.'),
             const SizedBox(height: 20),
-            const TextField(
-              decoration: InputDecoration(
+            TextField(
+              controller: resetEmail,
+              keyboardType: TextInputType.emailAddress,
+              decoration: const InputDecoration(
                 labelText: 'Registered email',
                 prefixIcon: Icon(Icons.mail_outline_rounded),
               ),
@@ -180,7 +197,23 @@ class _SignInViewState extends State<SignInView> {
             SizedBox(
               width: double.infinity,
               child: FilledButton(
-                onPressed: () => Navigator.pop(context),
+                onPressed: () async {
+                  final sent = await controller.sendPasswordReset(
+                    resetEmail.text,
+                  );
+                  if (!sheetContext.mounted) return;
+                  Navigator.pop(sheetContext);
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        sent
+                            ? 'Password reset email sent.'
+                            : controller.error ?? 'Could not send reset email.',
+                      ),
+                    ),
+                  );
+                },
                 child: const Text('Send reset link'),
               ),
             ),

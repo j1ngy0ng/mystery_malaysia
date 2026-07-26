@@ -21,6 +21,12 @@ class _ProfileViewState extends State<ProfileView> {
   );
 
   @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  @override
   void dispose() {
     controller.dispose();
     name.dispose();
@@ -120,11 +126,36 @@ class _ProfileViewState extends State<ProfileView> {
               ),
               const SizedBox(height: 14),
               FilledButton(
-                onPressed: () =>
-                    controller.save(name: name.text, username: username.text),
-                child: const Text('Save profile'),
+                onPressed: controller.isLoading
+                    ? null
+                    : () async {
+                        final saved = await controller.save(
+                          name: name.text,
+                          username: username.text,
+                        );
+                        if (!saved || !context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Profile updated.')),
+                        );
+                      },
+                child: controller.isLoading
+                    ? const SizedBox.square(
+                        dimension: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text('Save profile'),
               ),
               const SizedBox(height: 24),
+            ],
+            if (controller.error != null) ...[
+              Text(
+                controller.error!,
+                style: const TextStyle(color: AppColors.hibiscus),
+              ),
+              const SizedBox(height: 12),
             ],
             const SectionHeader(title: 'Explorer details'),
             const SizedBox(height: 10),
@@ -153,8 +184,11 @@ class _ProfileViewState extends State<ProfileView> {
             ),
             const SizedBox(height: 18),
             OutlinedButton.icon(
-              onPressed: () =>
-                  Navigator.pushNamedAndRemoveUntil(context, '/', (_) => false),
+              onPressed: () async {
+                final signedOut = await controller.signOut();
+                if (!signedOut || !context.mounted) return;
+                Navigator.pushNamedAndRemoveUntil(context, '/', (_) => false);
+              },
               icon: const Icon(Icons.logout_rounded),
               label: const Text('Sign out'),
             ),
@@ -162,6 +196,13 @@ class _ProfileViewState extends State<ProfileView> {
         );
       },
     );
+  }
+
+  Future<void> _loadProfile() async {
+    await controller.load();
+    if (!mounted) return;
+    name.text = controller.profile.name;
+    username.text = controller.profile.username;
   }
 }
 

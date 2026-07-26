@@ -226,6 +226,7 @@ flowchart LR
     Functions --> Database
     Functions --> Storage
     GenerateMission --> GeminiAPI
+    GenerateMission --> PlacesAPI
     RequestHint --> GeminiAPI
     GenerateDiary --> GeminiAPI
     ConfirmArrival --> PlacesAPI

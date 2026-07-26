@@ -1,0 +1,20 @@
+project_id = "mystery-malaysia"
+
+[auth]
+site_url = "com.mysterymalaysia://login-callback/"
+additional_redirect_urls = ["com.mysterymalaysia://login-callback/**"]
+
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
+
+[auth.email]
+enable_confirmations = true
+max_frequency = "1m0s"
+otp_length = 8
+
+# Hosted Supabase requires custom SMTP or a paid plan before this template can
+# be activated. The ready-to-use design is in templates/confirmation.html.
+
+[functions.generate-mission]
+verify_jwt = true

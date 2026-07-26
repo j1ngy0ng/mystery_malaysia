@@ -43,3 +43,10 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Local client configuration. The publishable Supabase key is client-safe, but
+# keeping environment-specific values out of Git prevents accidental mix-ups.
+.env.local.json
+/supabase/.temp/
+
+/tmp/

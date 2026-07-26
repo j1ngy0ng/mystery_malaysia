@@ -2,7 +2,8 @@
 
 Status: **Accepted - database implementation contract**
 Database: Supabase PostgreSQL
-Migration: `supabase/migrations/202607250001_initial_schema.sql`
+Migrations: `supabase/migrations/202607250001_initial_schema.sql` through
+`supabase/migrations/202607260003_dynamic_destination_discovery.sql`
 
 This schema supports the six MVC modules, multi-destination missions, solo and
 collaborative play, one canonical clue per destination, and one optional
@@ -26,6 +27,9 @@ User + session        1 -> 0..1 reflection
 User + session        1 -> 0..1 individual diary
 Collaborative session 1 -> 0..1 shared diary
 User                   1 -> 0..1 current mission
+Destination            1 -> 0..many safety reviews
+Destination            1 -> 0..many allocation records
+Destination            1 -> 0..1 live allocation
 ```
 
 The database-enforced clue and hint constraints are:
@@ -44,7 +48,7 @@ request a second additional hint for the same destination stage.
 | MVC module | Primary tables |
 | --- | --- |
 | User and Profile | `profiles` and Supabase Auth |
-| Mission Discovery | `destinations`, `destination_clues`, `mission_templates`, `mission_requests`, `mission_recommendations`, `mission_recommendation_stops`, `recommendation_events` |
+| Mission Discovery | `destinations`, `destination_clues`, `destination_safety_reviews`, `destination_allocations`, `mission_templates`, `mission_requests`, `mission_recommendations`, `mission_recommendation_stops`, `recommendation_events` |
 | Active Mission | `mission_sessions`, `user_current_missions`, `mission_stages`, `mission_stage_secrets`, `verified_visits`, `mission_session_events` |
 | Clue and Hint | `destination_clues`, `mission_clue_reveals`, `clue_hint_reveals`, `clue_progress` |
 | Passport and Diary | `stamp_definitions`, `user_stamps`, `badge_definitions`, `user_badges`, `xp_ledger`, `reflections`, `diary_entries` |
@@ -61,6 +65,7 @@ or printing because it remains sharp at any size.
 erDiagram
     AUTH_USERS ||--|| PROFILES : has
     AUTH_USERS ||--o{ MISSION_REQUESTS : creates
+    AUTH_USERS ||--o{ DESTINATION_ALLOCATIONS : receives
     AUTH_USERS ||--o{ MISSION_PARTICIPANTS : joins
     AUTH_USERS ||--o| USER_CURRENT_MISSIONS : resumes
     AUTH_USERS ||--o{ PARTICIPANT_LOCATIONS : reports
@@ -78,6 +83,8 @@ erDiagram
     AUTH_USERS ||--o{ COMMAND_RECEIPTS : submits
 
     DESTINATIONS ||--o| DESTINATION_CLUES : has
+    DESTINATIONS ||--o{ DESTINATION_SAFETY_REVIEWS : assessed_by
+    DESTINATIONS ||--o{ DESTINATION_ALLOCATIONS : coordinated_by
     DESTINATIONS ||--o{ MISSION_RECOMMENDATION_STOPS : selected_for
     DESTINATIONS ||--o{ MISSION_STAGE_SECRETS : targets
     DESTINATIONS ||--o| STAMP_DEFINITIONS : awards
@@ -85,9 +92,11 @@ erDiagram
     DESTINATION_CLUES ||--o{ MISSION_STAGE_SECRETS : supplies
 
     MISSION_REQUESTS ||--o{ MISSION_RECOMMENDATIONS : produces
+    MISSION_REQUESTS ||--o{ DESTINATION_ALLOCATIONS : reserves
     MISSION_REQUESTS ||--o{ RECOMMENDATION_EVENTS : logs
     MISSION_RECOMMENDATIONS ||--|{ MISSION_RECOMMENDATION_STOPS : routes
     MISSION_RECOMMENDATIONS ||--o{ RECOMMENDATION_EVENTS : logs
+    MISSION_RECOMMENDATIONS ||--o{ DESTINATION_ALLOCATIONS : holds
     MISSION_RECOMMENDATIONS o|--o| MISSION_SESSIONS : starts
     MISSION_TEMPLATES ||--o{ MISSION_RECOMMENDATION_STOPS : shapes
 
@@ -138,17 +147,27 @@ Email, phone number, password hashes, providers and sessions remain in
 
 | Table | Purpose | Key integrity rule |
 | --- | --- | --- |
-| `destinations` | Destination catalogue, geofence coordinates, opening hours, availability, accessibility, facts and popularity | Coordinates and numeric estimates are validated |
+| `destinations` | Server-side cache and safety registry for curated or Gemini/Google Maps-grounded places | Google Place ID is unique; coordinates, rating, review count, discovery score and safety status are validated |
 | `destination_clues` | Server-only canonical clue, answer rules and optional hint | `destination_id` is the primary key: at most one clue per destination; only destinations with a clue can become mission stops |
+| `destination_safety_reviews` | Server-only automated, manual and incident review evidence | Every review belongs to one destination and records status, score and expiry |
+| `destination_allocations` | Server-only reservation/history record used to distribute explorers | A partial unique index permits only one live `reserved` or `active` allocation per destination |
 | `mission_templates` | Optional administrator-controlled mission generation rules | Stop, duration and budget ranges are validated |
 | `mission_requests` | Immutable snapshot of one recommendation request | Contains location, time, budget, distance, categories, style, state and group constraints |
 | `mission_recommendations` | Up to three safe mission choices shown to the requester | `unique(request_id, recommendation_rank)` |
 | `mission_recommendation_stops` | Server-only ordered hidden destinations for each recommendation | Unique stop number and unique destination within a recommendation |
 | `recommendation_events` | Server-only generation, regeneration, acceptance and failure audit log | Stores AI model, prompt version and payload |
 
-Recommendation frequency is calculated from
-`mission_recommendation_stops.destination_id`; a separate counter table is not
-needed.
+Recommendation frequency remains derivable from
+`mission_recommendation_stops.destination_id`. `destination_allocations` is not
+a popularity counter: it is the concurrency lock and per-user assignment
+history used to avoid repeats and simultaneous crowding.
+
+Gemini discovers candidate places, Google Maps grounding supplies real place
+identifiers, Google Places Details verifies structured location and public
+rating evidence, and the Edge Function calculates tourist-suitability,
+hidden-gem and distance-fit scores. These automated scores are prioritization
+signals, not a guarantee of personal safety. A curated catalogue remains as the
+failure fallback.
 
 ### Active Mission
 

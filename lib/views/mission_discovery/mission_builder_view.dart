@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../controllers/mission_discovery/mission_discovery_controller.dart';
+import 'recommendations_view.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/status_pill.dart';
@@ -14,6 +15,12 @@ class MissionBuilderView extends StatefulWidget {
 
 class _MissionBuilderViewState extends State<MissionBuilderView> {
   final controller = MissionDiscoveryController();
+
+  @override
+  void initState() {
+    super.initState();
+    controller.detectCurrentLocation();
+  }
 
   @override
   void dispose() {
@@ -114,47 +121,91 @@ class _MissionBuilderViewState extends State<MissionBuilderView> {
                   color: AppColors.paleTeal,
                   borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
                 ),
-                child: const Row(
+                child: Row(
                   children: [
-                    CircleAvatar(
+                    const CircleAvatar(
                       backgroundColor: AppColors.teal,
                       foregroundColor: Colors.white,
                       child: Icon(Icons.my_location_rounded),
                     ),
-                    SizedBox(width: 13),
+                    const SizedBox(width: 13),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
+                          const Text(
                             'Starting near your current location',
                             style: TextStyle(fontWeight: FontWeight.w800),
                           ),
-                          SizedBox(height: 4),
-                          Text('Bukit Bintang, Kuala Lumpur • GPS detected'),
+                          const SizedBox(height: 4),
+                          Text(
+                            controller.locationError ??
+                                controller.locationLabel,
+                          ),
                         ],
                       ),
                     ),
-                    Icon(Icons.check_circle_rounded, color: AppColors.green),
+                    if (controller.isLocating)
+                      const SizedBox.square(
+                        dimension: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    else
+                      IconButton(
+                        tooltip: controller.hasLocation
+                            ? 'Refresh location'
+                            : 'Try location again',
+                        onPressed: controller.detectCurrentLocation,
+                        icon: Icon(
+                          controller.hasLocation
+                              ? Icons.check_circle_rounded
+                              : Icons.refresh_rounded,
+                          color: controller.hasLocation
+                              ? AppColors.green
+                              : AppColors.hibiscus,
+                        ),
+                      ),
                   ],
                 ),
               ),
               const SizedBox(height: 18),
-              const Row(
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
                 children: [
                   StatusPill(
-                    label: 'GPS location ready',
+                    label: controller.hasLocation
+                        ? 'GPS location ready'
+                        : 'GPS required',
                     icon: Icons.my_location_rounded,
-                    color: AppColors.green,
+                    color: controller.hasLocation
+                        ? AppColors.green
+                        : AppColors.hibiscus,
                   ),
-                  SizedBox(width: 8),
-                  StatusPill(
+                  const StatusPill(
                     label: 'Online',
                     icon: Icons.wifi_rounded,
                     color: AppColors.straits,
                   ),
                 ],
               ),
+              if (controller.generationError != null) ...[
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.paleHibiscus,
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                  ),
+                  child: Text(
+                    controller.generationError!,
+                    style: const TextStyle(
+                      color: AppColors.hibiscus,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
             ],
           );
         },
@@ -165,12 +216,21 @@ class _MissionBuilderViewState extends State<MissionBuilderView> {
           child: AnimatedBuilder(
             animation: controller,
             builder: (context, _) => FilledButton.icon(
-              onPressed: controller.isGenerating
+              onPressed: controller.isGenerating || !controller.hasLocation
                   ? null
                   : () async {
-                      await controller.generate();
-                      if (!context.mounted) return;
-                      Navigator.pushNamed(context, '/missions/demo/preview');
+                      final generated = await controller.generate();
+                      if (!generated || !context.mounted) return;
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute<void>(
+                          builder: (_) => RecommendationsView(
+                            recommendations: controller.recommendations,
+                            budgetMyr: controller.budget,
+                            availableHours: controller.duration,
+                          ),
+                        ),
+                      );
                     },
               icon: controller.isGenerating
                   ? const SizedBox(

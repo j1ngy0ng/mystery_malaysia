@@ -1,12 +1,39 @@
 import 'package:flutter/foundation.dart';
 
+import '../../errors/api_error.dart';
+import '../../models/active_mission/app_location.dart';
 import '../../models/mission_discovery/mission_recommendation.dart';
+import '../../services/device/location_service.dart';
+import '../../services/gemini/gemini_service.dart';
 
 class MissionDiscoveryController extends ChangeNotifier {
+  MissionDiscoveryController({
+    LocationService? locationService,
+    GeminiService? geminiService,
+    List<MissionRecommendation>? initialRecommendations,
+  }) : _locationService = locationService ?? LocationService(),
+       _geminiService = geminiService ?? GeminiService(),
+       recommendations = List.of(initialRecommendations ?? demoRecommendations);
+
+  final LocationService _locationService;
+  final GeminiService _geminiService;
+
   String selectedCategory = 'Culture';
   double budget = 120;
   double duration = 4;
   bool isGenerating = false;
+  bool isLocating = false;
+  AppLocation? currentLocation;
+  String? locationError;
+  String? generationError;
+
+  bool get hasLocation => currentLocation != null;
+
+  String get locationLabel {
+    final location = currentLocation;
+    if (location == null) return 'Waiting for GPS';
+    return '${location.coordinateLabel} • GPS detected';
+  }
 
   final categories = const [
     'Culture',
@@ -16,7 +43,7 @@ class MissionDiscoveryController extends ChangeNotifier {
     'Hidden gems',
   ];
 
-  final recommendations = const [
+  static const demoRecommendations = [
     MissionRecommendation(
       title: 'Lanterns & Legends',
       briefing:
@@ -55,6 +82,8 @@ class MissionDiscoveryController extends ChangeNotifier {
     ),
   ];
 
+  final List<MissionRecommendation> recommendations;
+
   void selectCategory(String value) {
     selectedCategory = value;
     notifyListeners();
@@ -70,11 +99,49 @@ class MissionDiscoveryController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> generate() async {
+  Future<void> detectCurrentLocation() async {
+    isLocating = true;
+    locationError = null;
+    notifyListeners();
+
+    try {
+      currentLocation = await _locationService.getCurrentLocation();
+    } on LocationServiceException catch (error) {
+      locationError = error.message;
+    } finally {
+      isLocating = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> generate() async {
+    final location = currentLocation;
+    if (location == null) {
+      generationError = 'A GPS location is required to generate missions.';
+      notifyListeners();
+      return false;
+    }
+
     isGenerating = true;
+    generationError = null;
     notifyListeners();
-    await Future<void>.delayed(const Duration(milliseconds: 650));
-    isGenerating = false;
-    notifyListeners();
+    try {
+      final generated = await _geminiService.generateMissions(
+        origin: location,
+        categories: [selectedCategory],
+        availableMinutes: (duration * 60).round(),
+        budgetMyr: budget,
+      );
+      recommendations
+        ..clear()
+        ..addAll(generated);
+      return true;
+    } on ApiError catch (error) {
+      generationError = error.message;
+      return false;
+    } finally {
+      isGenerating = false;
+      notifyListeners();
+    }
   }
 }

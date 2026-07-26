@@ -15,6 +15,21 @@ class UserProfile {
   final int level;
   final int xp;
 
+  factory UserProfile.fromSupabase(
+    Map<String, dynamic> json, {
+    required String email,
+  }) {
+    final username = json['username'] as String?;
+    return UserProfile(
+      name: json['display_name'] as String? ?? 'Explorer',
+      username: username == null || username.isEmpty ? '' : '@$username',
+      email: email,
+      homeState: json['hometown'] as String? ?? 'Not set',
+      level: 1,
+      xp: 0,
+    );
+  }
+
   UserProfile copyWith({
     String? name,
     String? username,

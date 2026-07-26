@@ -1,0 +1,226 @@
+-- Starter content for development and coursework demonstrations.
+-- Replace or expand this curated catalogue before a production launch.
+
+insert into public.destinations (
+  id,
+  external_place_id,
+  name,
+  state,
+  city,
+  latitude,
+  longitude,
+  categories,
+  estimated_budget_myr,
+  estimated_duration_minutes,
+  visitor_information,
+  facts,
+  popularity_score,
+  active
+)
+values
+  (
+    '10000000-0000-4000-8000-000000000001',
+    'starter:central-market-kl',
+    'Central Market Kuala Lumpur',
+    'Kuala Lumpur',
+    'Kuala Lumpur',
+    3.14568,
+    101.69530,
+    array['Culture', 'Food', 'History'],
+    25,
+    75,
+    '{"admission":"Free entry"}'::jsonb,
+    '["A heritage market known for Malaysian arts, crafts and food."]'::jsonb,
+    9.2,
+    true
+  ),
+  (
+    '10000000-0000-4000-8000-000000000002',
+    'starter:perdana-botanical-gardens',
+    'Perdana Botanical Gardens',
+    'Kuala Lumpur',
+    'Kuala Lumpur',
+    3.14330,
+    101.68480,
+    array['Nature', 'Hidden gems'],
+    0,
+    90,
+    '{"admission":"Free entry"}'::jsonb,
+    '["A historic city garden with tropical collections and lakes."]'::jsonb,
+    8.5,
+    true
+  ),
+  (
+    '10000000-0000-4000-8000-000000000003',
+    'starter:kl-forest-eco-park',
+    'KL Forest Eco Park',
+    'Kuala Lumpur',
+    'Kuala Lumpur',
+    3.15270,
+    101.70470,
+    array['Nature', 'Hidden gems'],
+    40,
+    90,
+    '{"visit_note":"Outdoor attraction; check current opening conditions."}'::jsonb,
+    '["A tropical forest reserve in the centre of Kuala Lumpur."]'::jsonb,
+    8.7,
+    true
+  ),
+  (
+    '10000000-0000-4000-8000-000000000004',
+    'starter:thean-hou-temple',
+    'Thean Hou Temple',
+    'Kuala Lumpur',
+    'Kuala Lumpur',
+    3.12180,
+    101.68720,
+    array['Culture', 'History'],
+    10,
+    70,
+    '{"visit_note":"Dress respectfully at this active place of worship."}'::jsonb,
+    '["A hilltop temple combining traditional and modern architectural details."]'::jsonb,
+    8.9,
+    true
+  ),
+  (
+    '10000000-0000-4000-8000-000000000005',
+    'starter:kampung-baru',
+    'Kampung Baru',
+    'Kuala Lumpur',
+    'Kuala Lumpur',
+    3.16310,
+    101.70650,
+    array['Culture', 'Food', 'History'],
+    35,
+    90,
+    '{"visit_note":"Public neighbourhood; respect residents and private property."}'::jsonb,
+    '["A long-established Malay neighbourhood surrounded by the modern city."]'::jsonb,
+    9.0,
+    true
+  ),
+  (
+    '10000000-0000-4000-8000-000000000006',
+    'starter:batu-caves',
+    'Batu Caves',
+    'Selangor',
+    'Gombak',
+    3.23790,
+    101.68400,
+    array['Culture', 'History', 'Nature'],
+    20,
+    120,
+    '{"visit_note":"Dress respectfully and prepare for a long staircase."}'::jsonb,
+    '["A limestone cave complex and major Hindu place of worship."]'::jsonb,
+    9.7,
+    true
+  )
+on conflict (id) do update
+set
+  name = excluded.name,
+  state = excluded.state,
+  city = excluded.city,
+  latitude = excluded.latitude,
+  longitude = excluded.longitude,
+  categories = excluded.categories,
+  estimated_budget_myr = excluded.estimated_budget_myr,
+  estimated_duration_minutes = excluded.estimated_duration_minutes,
+  visitor_information = excluded.visitor_information,
+  facts = excluded.facts,
+  popularity_score = excluded.popularity_score,
+  active = excluded.active;
+
+insert into public.destination_clues (
+  destination_id,
+  clue_type,
+  title,
+  prompt,
+  accepted_answers,
+  validation_rules,
+  hint_text,
+  clue_xp_reward,
+  hint_xp_cost,
+  prompt_version
+)
+values
+  (
+    '10000000-0000-4000-8000-000000000001',
+    'observation',
+    'Colours beneath a heritage roof',
+    'Seek a place where Malaysian craft, flavour and colour gather under one roof.',
+    '[]'::jsonb,
+    '{"verification":"location","radius_metres":150}'::jsonb,
+    'Look near the meeting point of old trading streets and the river heritage zone.',
+    80,
+    15,
+    'starter-v1'
+  ),
+  (
+    '10000000-0000-4000-8000-000000000002',
+    'observation',
+    'A green pause in the city',
+    'Find the broad tropical garden where lake reflections replace traffic lights.',
+    '[]'::jsonb,
+    '{"verification":"location","radius_metres":150}'::jsonb,
+    'Your destination belongs to Kuala Lumpur''s historic green heart.',
+    80,
+    15,
+    'starter-v1'
+  ),
+  (
+    '10000000-0000-4000-8000-000000000003',
+    'observation',
+    'Canopy among towers',
+    'Follow the clue to a pocket of ancient green watched over by city skyscrapers.',
+    '[]'::jsonb,
+    '{"verification":"location","radius_metres":150}'::jsonb,
+    'Look for a forest reserve close to one of Kuala Lumpur''s tallest landmarks.',
+    100,
+    20,
+    'starter-v1'
+  ),
+  (
+    '10000000-0000-4000-8000-000000000004',
+    'observation',
+    'Lanterns above the skyline',
+    'Climb toward a place of red pillars, sweeping roofs and a wide city view.',
+    '[]'::jsonb,
+    '{"verification":"location","radius_metres":150}'::jsonb,
+    'Search the hill southwest of the city centre.',
+    100,
+    20,
+    'starter-v1'
+  ),
+  (
+    '10000000-0000-4000-8000-000000000005',
+    'observation',
+    'Old village, new skyline',
+    'Find the neighbourhood where traditional Malay homes face the modern towers.',
+    '[]'::jsonb,
+    '{"verification":"location","radius_metres":150}'::jsonb,
+    'The aroma of classic Malay food is part of the trail.',
+    80,
+    15,
+    'starter-v1'
+  ),
+  (
+    '10000000-0000-4000-8000-000000000006',
+    'observation',
+    'Steps into limestone',
+    'Seek the colourful staircase leading toward chambers shaped by ancient stone.',
+    '[]'::jsonb,
+    '{"verification":"location","radius_metres":180}'::jsonb,
+    'Travel north of central Kuala Lumpur and look for a towering golden guardian.',
+    120,
+    25,
+    'starter-v1'
+  )
+on conflict (destination_id) do update
+set
+  clue_type = excluded.clue_type,
+  title = excluded.title,
+  prompt = excluded.prompt,
+  validation_rules = excluded.validation_rules,
+  hint_text = excluded.hint_text,
+  clue_xp_reward = excluded.clue_xp_reward,
+  hint_xp_cost = excluded.hint_xp_cost,
+  prompt_version = excluded.prompt_version;

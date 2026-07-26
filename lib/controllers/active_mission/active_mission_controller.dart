@@ -1,8 +1,20 @@
 import 'package:flutter/foundation.dart';
 
+import '../../models/active_mission/app_location.dart';
 import '../../models/active_mission/mission_session.dart';
+import '../../services/device/location_service.dart';
 
 class ActiveMissionController extends ChangeNotifier {
+  ActiveMissionController({LocationService? locationService})
+    : _locationService = locationService ?? LocationService();
+
+  static const mysteryZone = AppLocation(
+    latitude: 3.14886,
+    longitude: 101.69572,
+  );
+
+  final LocationService _locationService;
+
   MissionSession session = const MissionSession(
     title: 'Lanterns & Legends',
     region: 'Kuala Lumpur',
@@ -11,6 +23,13 @@ class ActiveMissionController extends ChangeNotifier {
     distanceMetres: 420,
     status: MissionStatus.active,
   );
+
+  AppLocation? currentLocation;
+  bool isLocating = false;
+  String? locationError;
+
+  bool get canConfirmArrival =>
+      currentLocation != null && session.distanceMetres <= 150;
 
   String get temperature {
     if (session.distanceMetres <= 120) return 'Very hot!';
@@ -26,11 +45,23 @@ class ActiveMissionController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void moveCloser() {
-    session = session.copyWith(
-      distanceMetres: (session.distanceMetres - 90).clamp(40, 9999),
-    );
+  Future<void> refreshLocation() async {
+    isLocating = true;
+    locationError = null;
     notifyListeners();
+
+    try {
+      final location = await _locationService.getCurrentLocation();
+      currentLocation = location;
+      session = session.copyWith(
+        distanceMetres: _locationService.distanceMetres(location, mysteryZone),
+      );
+    } on LocationServiceException catch (error) {
+      locationError = error.message;
+    } finally {
+      isLocating = false;
+      notifyListeners();
+    }
   }
 
   void abandon() {

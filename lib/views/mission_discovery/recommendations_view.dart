@@ -8,21 +8,23 @@ import '../widgets/mission_card.dart';
 import '../widgets/status_pill.dart';
 
 class RecommendationsView extends StatefulWidget {
-  const RecommendationsView({super.key});
+  const RecommendationsView({
+    super.key,
+    this.recommendations,
+    this.budgetMyr = 120,
+    this.availableHours = 4,
+  });
+
+  final List<MissionRecommendation>? recommendations;
+  final double budgetMyr;
+  final double availableHours;
 
   @override
   State<RecommendationsView> createState() => _RecommendationsViewState();
 }
 
 class _RecommendationsViewState extends State<RecommendationsView> {
-  final controller = MissionDiscoveryController();
   MissionRecommendation? selected;
-
-  @override
-  void dispose() {
-    controller.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,19 +47,22 @@ class _RecommendationsViewState extends State<RecommendationsView> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Built around your culture vibe, RM 120 budget and four-hour window.',
+            'Built around your selected vibe, RM ${widget.budgetMyr.round()} '
+            'budget and ${widget.availableHours.round()}-hour window.',
             style: Theme.of(context).textTheme.bodyLarge,
           ),
           const SizedBox(height: 20),
-          ...controller.recommendations.map(
-            (mission) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: MissionCard(
-                mission: mission,
-                onTap: () => setState(() => selected = mission),
+          ...(widget.recommendations ??
+                  MissionDiscoveryController.demoRecommendations)
+              .map(
+                (mission) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: MissionCard(
+                    mission: mission,
+                    onTap: () => setState(() => selected = mission),
+                  ),
+                ),
               ),
-            ),
-          ),
           const SizedBox(height: 6),
           OutlinedButton.icon(
             onPressed: () => Navigator.pop(context),

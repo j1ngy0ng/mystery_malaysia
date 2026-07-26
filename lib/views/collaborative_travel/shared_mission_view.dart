@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../controllers/collaborative_travel/collaborative_travel_controller.dart';
+import '../../models/active_mission/app_location.dart';
 import '../../models/collaborative_travel/mission_participant.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
-import '../widgets/demo_map.dart';
+import '../widgets/mission_map.dart';
 import '../widgets/status_pill.dart';
 
 class SharedMissionView extends StatefulWidget {
@@ -101,7 +102,11 @@ class _SharedMissionViewState extends State<SharedMissionView> {
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 10),
-              const DemoMap(height: 190),
+              const MissionMap(
+                focus: AppLocation(latitude: 3.14795, longitude: 101.71320),
+                height: 190,
+                mysteryRadiusMetres: 250,
+              ),
               const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.all(16),

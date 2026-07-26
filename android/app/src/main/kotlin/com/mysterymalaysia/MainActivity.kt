@@ -1,4 +1,4 @@
-package com.example.mystery_malaysia
+package com.mysterymalaysia
 
 import io.flutter.embedding.android.FlutterActivity
 

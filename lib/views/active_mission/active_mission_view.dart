@@ -4,7 +4,7 @@ import '../../controllers/active_mission/active_mission_controller.dart';
 import '../../models/active_mission/mission_session.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
-import '../widgets/demo_map.dart';
+import '../widgets/mission_map.dart';
 import '../widgets/status_pill.dart';
 
 class ActiveMissionView extends StatefulWidget {
@@ -16,6 +16,12 @@ class ActiveMissionView extends StatefulWidget {
 
 class _ActiveMissionViewState extends State<ActiveMissionView> {
   final controller = ActiveMissionController();
+
+  @override
+  void initState() {
+    super.initState();
+    controller.refreshLocation();
+  }
 
   @override
   void dispose() {
@@ -90,7 +96,11 @@ class _ActiveMissionViewState extends State<ActiveMissionView> {
                   const SizedBox(height: 20),
                   Stack(
                     children: [
-                      const DemoMap(height: 290),
+                      MissionMap(
+                        focus: ActiveMissionController.mysteryZone,
+                        currentLocation: controller.currentLocation,
+                        height: 290,
+                      ),
                       Positioned(
                         left: 14,
                         right: 14,
@@ -125,6 +135,13 @@ class _ActiveMissionViewState extends State<ActiveMissionView> {
                       ),
                     ],
                   ),
+                  if (controller.locationError != null) ...[
+                    const SizedBox(height: 12),
+                    _LocationErrorCard(
+                      message: controller.locationError!,
+                      onRetry: controller.refreshLocation,
+                    ),
+                  ],
                   const SizedBox(height: 18),
                   _TemperatureCard(
                     temperature: controller.temperature,
@@ -231,22 +248,34 @@ class _ActiveMissionViewState extends State<ActiveMissionView> {
                     padding: const EdgeInsets.fromLTRB(20, 8, 20, 14),
                     child: FilledButton.icon(
                       style: FilledButton.styleFrom(
-                        backgroundColor: session.distanceMetres <= 150
+                        backgroundColor: controller.canConfirmArrival
                             ? AppColors.green
                             : AppColors.hibiscus,
                       ),
-                      onPressed: session.distanceMetres <= 150
+                      onPressed: controller.isLocating
+                          ? null
+                          : controller.canConfirmArrival
                           ? () => _showArrival(context)
-                          : controller.moveCloser,
-                      icon: Icon(
-                        session.distanceMetres <= 150
-                            ? Icons.location_on_rounded
-                            : Icons.directions_walk_rounded,
-                      ),
+                          : controller.refreshLocation,
+                      icon: controller.isLocating
+                          ? const SizedBox.square(
+                              dimension: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Icon(
+                              controller.canConfirmArrival
+                                  ? Icons.location_on_rounded
+                                  : Icons.my_location_rounded,
+                            ),
                       label: Text(
-                        session.distanceMetres <= 150
+                        controller.isLocating
+                            ? 'Checking your location...'
+                            : controller.canConfirmArrival
                             ? 'Confirm I have arrived'
-                            : 'Demo: move 90 m closer',
+                            : 'Refresh GPS location',
                       ),
                     ),
                   ),
@@ -329,6 +358,32 @@ class _ActiveMissionViewState extends State<ActiveMissionView> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _LocationErrorCard extends StatelessWidget {
+  const _LocationErrorCard({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.paleHibiscus,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.location_off_rounded, color: AppColors.hibiscus),
+          const SizedBox(width: 10),
+          Expanded(child: Text(message)),
+          TextButton(onPressed: onRetry, child: const Text('Retry')),
+        ],
       ),
     );
   }
