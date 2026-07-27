@@ -97,7 +97,6 @@ class _ActiveMissionViewState extends State<ActiveMissionView> {
                   Stack(
                     children: [
                       MissionMap(
-                        focus: ActiveMissionController.mysteryZone,
                         currentLocation: controller.currentLocation,
                         height: 290,
                       ),
@@ -423,7 +422,7 @@ class _TemperatureCard extends StatelessWidget {
                 Text(
                   hot
                       ? 'Your hidden gem is close. Keep exploring!'
-                      : 'Try moving toward the highlighted search area.',
+                      : 'Use your clue and keep exploring nearby.',
                 ),
               ],
             ),

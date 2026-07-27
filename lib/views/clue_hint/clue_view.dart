@@ -145,7 +145,7 @@ class _ClueViewState extends State<ClueView> {
                           ),
                           SizedBox(height: 5),
                           Text(
-                            'Return to the map and follow the Hot & Cold signal. The destination is revealed only after GPS confirms you are inside the geofence.',
+                            'Use the clue and Hot & Cold signal to explore. The map shows only your location, and the destination is revealed after GPS confirms your arrival.',
                           ),
                         ],
                       ),

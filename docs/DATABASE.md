@@ -3,7 +3,7 @@
 Status: **Accepted - database implementation contract**
 Database: Supabase PostgreSQL
 Migrations: `supabase/migrations/202607250001_initial_schema.sql` through
-`supabase/migrations/202607260003_dynamic_destination_discovery.sql`
+`supabase/migrations/202607270001_capacity_based_destination_allocations.sql`
 
 This schema supports the six MVC modules, multi-destination missions, solo and
 collaborative play, one canonical clue per destination, and one optional
@@ -14,7 +14,7 @@ organization; PostgreSQL relationships remain normalized across modules.
 
 ```text
 Mission request       1 -> 0..3 recommendations
-Recommendation        1 -> 1..many ordered destinations
+Recommendation        1 -> exactly 3 ordered destinations
 Mission session       1 -> 1..many ordered stages
 Mission stage         1 -> 1 hidden destination
 Destination           1 -> 0..1 canonical clue
@@ -29,7 +29,7 @@ Collaborative session 1 -> 0..1 shared diary
 User                   1 -> 0..1 current mission
 Destination            1 -> 0..many safety reviews
 Destination            1 -> 0..many allocation records
-Destination            1 -> 0..1 live allocation
+Destination            1 -> 0..capacity live allocations
 ```
 
 The database-enforced clue and hint constraints are:
@@ -147,14 +147,14 @@ Email, phone number, password hashes, providers and sessions remain in
 
 | Table | Purpose | Key integrity rule |
 | --- | --- | --- |
-| `destinations` | Server-side cache and safety registry for curated or Gemini/Google Maps-grounded places | Google Place ID is unique; coordinates, rating, review count, discovery score and safety status are validated |
+| `destinations` | Server-side cache and safety registry for curated or Google Places Nearby Search results | Google Place ID is unique; coordinates, rating, review count, discovery score, safety status and capacity are validated |
 | `destination_clues` | Server-only canonical clue, answer rules and optional hint | `destination_id` is the primary key: at most one clue per destination; only destinations with a clue can become mission stops |
 | `destination_safety_reviews` | Server-only automated, manual and incident review evidence | Every review belongs to one destination and records status, score and expiry |
-| `destination_allocations` | Server-only reservation/history record used to distribute explorers | A partial unique index permits only one live `reserved` or `active` allocation per destination |
+| `destination_allocations` | Server-only reservation/history record used to distribute explorers | An atomic database function permits live allocations only while the destination remains below its `capacity_per_slot` |
 | `mission_templates` | Optional administrator-controlled mission generation rules | Stop, duration and budget ranges are validated |
 | `mission_requests` | Immutable snapshot of one recommendation request | Contains location, time, budget, distance, categories, style, state and group constraints |
 | `mission_recommendations` | Up to three safe mission choices shown to the requester | `unique(request_id, recommendation_rank)` |
-| `mission_recommendation_stops` | Server-only ordered hidden destinations for each recommendation | Unique stop number and unique destination within a recommendation |
+| `mission_recommendation_stops` | Three server-only ordered hidden destinations for each recommendation | Generation accepts only three unique destinations numbered 1 to 3 |
 | `recommendation_events` | Server-only generation, regeneration, acceptance and failure audit log | Stores AI model, prompt version and payload |
 
 Recommendation frequency remains derivable from
@@ -162,12 +162,18 @@ Recommendation frequency remains derivable from
 a popularity counter: it is the concurrency lock and per-user assignment
 history used to avoid repeats and simultaneous crowding.
 
-Gemini discovers candidate places, Google Maps grounding supplies real place
-identifiers, Google Places Details verifies structured location and public
-rating evidence, and the Edge Function calculates tourist-suitability,
-hidden-gem and distance-fit scores. These automated scores are prioritization
-signals, not a guarantee of personal safety. A curated catalogue remains as the
-failure fallback.
+Google Places Nearby Search supplies real place identifiers, location, type,
+operating status and public rating evidence. The Edge Function calculates
+tourist-suitability, hidden-gem, distance-fit and venue-capacity values.
+Gemini then chooses only from that verified shortlist and writes the mystery
+mission. These automated scores are prioritization signals, not a guarantee of
+personal safety. A curated catalogue remains as the failure fallback.
+
+`capacity_per_slot` counts simultaneous mission allocations rather than exact
+people at a venue. The minimum is two; small places normally allow three,
+food venues four, museums and attractions five, and larger outdoor places up
+to eight. The reservation function locks the destination row while counting
+live allocations so concurrent requests cannot exceed the stored capacity.
 
 ### Active Mission
 

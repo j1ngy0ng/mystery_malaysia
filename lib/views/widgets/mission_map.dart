@@ -6,19 +6,15 @@ import '../theme/app_colors.dart';
 
 class MissionMap extends StatefulWidget {
   const MissionMap({
-    required this.focus,
+    required this.currentLocation,
     super.key,
-    this.currentLocation,
     this.height = 260,
-    this.mysteryRadiusMetres = 150,
     this.interactive = false,
     this.borderRadius = 28,
   });
 
-  final AppLocation focus;
   final AppLocation? currentLocation;
   final double height;
-  final double mysteryRadiusMetres;
   final bool interactive;
   final double borderRadius;
 
@@ -28,8 +24,6 @@ class MissionMap extends StatefulWidget {
 
 class _MissionMapState extends State<MissionMap> {
   GoogleMapController? _mapController;
-
-  LatLng get _focus => LatLng(widget.focus.latitude, widget.focus.longitude);
 
   @override
   void didUpdateWidget(covariant MissionMap oldWidget) {
@@ -48,9 +42,13 @@ class _MissionMapState extends State<MissionMap> {
   @override
   Widget build(BuildContext context) {
     final current = widget.currentLocation;
-    final currentPoint = current == null
-        ? null
-        : LatLng(current.latitude, current.longitude);
+    if (current == null) {
+      return _LocationLoadingMap(
+        height: widget.height,
+        borderRadius: widget.borderRadius,
+      );
+    }
+    final currentPoint = LatLng(current.latitude, current.longitude);
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(widget.borderRadius),
@@ -61,31 +59,23 @@ class _MissionMapState extends State<MissionMap> {
           children: [
             Positioned.fill(
               child: GoogleMap(
-                initialCameraPosition: CameraPosition(target: _focus, zoom: 15),
+                initialCameraPosition: CameraPosition(
+                  target: currentPoint,
+                  zoom: 16,
+                ),
                 onMapCreated: (controller) {
                   _mapController = controller;
                   _frameMap();
                 },
-                circles: {
-                  Circle(
-                    circleId: const CircleId('mystery-zone'),
-                    center: _focus,
-                    radius: widget.mysteryRadiusMetres,
-                    fillColor: AppColors.mango.withValues(alpha: .24),
-                    strokeColor: AppColors.hibiscus,
-                    strokeWidth: 3,
-                  ),
-                },
                 markers: {
-                  if (currentPoint != null)
-                    Marker(
-                      markerId: const MarkerId('traveller'),
-                      position: currentPoint,
-                      infoWindow: const InfoWindow(title: 'You are here'),
-                      icon: BitmapDescriptor.defaultMarkerWithHue(
-                        BitmapDescriptor.hueAzure,
-                      ),
+                  Marker(
+                    markerId: const MarkerId('traveller'),
+                    position: currentPoint,
+                    infoWindow: const InfoWindow(title: 'You are here'),
+                    icon: BitmapDescriptor.defaultMarkerWithHue(
+                      BitmapDescriptor.hueAzure,
                     ),
+                  ),
                 },
                 compassEnabled: widget.interactive,
                 mapToolbarEnabled: false,
@@ -119,11 +109,8 @@ class _MissionMapState extends State<MissionMap> {
   Future<void> _openInteractiveMap(BuildContext context) {
     return Navigator.of(context).push<void>(
       MaterialPageRoute(
-        builder: (_) => _InteractiveMissionMapPage(
-          focus: widget.focus,
-          currentLocation: widget.currentLocation,
-          mysteryRadiusMetres: widget.mysteryRadiusMetres,
-        ),
+        builder: (_) =>
+            _InteractiveMissionMapPage(currentLocation: widget.currentLocation),
       ),
     );
   }
@@ -131,40 +118,41 @@ class _MissionMapState extends State<MissionMap> {
   Future<void> _frameMap() async {
     final controller = _mapController;
     final current = widget.currentLocation;
-    if (controller == null) return;
-    if (current == null) {
-      await controller.animateCamera(CameraUpdate.newLatLngZoom(_focus, 15));
-      return;
-    }
+    if (controller == null || current == null) return;
 
     final currentPoint = LatLng(current.latitude, current.longitude);
-    final southWest = LatLng(
-      currentPoint.latitude < _focus.latitude
-          ? currentPoint.latitude
-          : _focus.latitude,
-      currentPoint.longitude < _focus.longitude
-          ? currentPoint.longitude
-          : _focus.longitude,
-    );
-    final northEast = LatLng(
-      currentPoint.latitude > _focus.latitude
-          ? currentPoint.latitude
-          : _focus.latitude,
-      currentPoint.longitude > _focus.longitude
-          ? currentPoint.longitude
-          : _focus.longitude,
-    );
-
-    if (southWest == northEast) {
-      await controller.animateCamera(
-        CameraUpdate.newLatLngZoom(currentPoint, 16),
-      );
-      return;
-    }
     await controller.animateCamera(
-      CameraUpdate.newLatLngBounds(
-        LatLngBounds(southwest: southWest, northeast: northEast),
-        64,
+      CameraUpdate.newLatLngZoom(currentPoint, 16),
+    );
+  }
+}
+
+class _LocationLoadingMap extends StatelessWidget {
+  const _LocationLoadingMap({required this.height, required this.borderRadius});
+
+  final double height;
+  final double borderRadius;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: height,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: AppColors.paleTeal,
+        borderRadius: BorderRadius.circular(borderRadius),
+      ),
+      alignment: Alignment.center,
+      child: const Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.location_searching_rounded, size: 36),
+          SizedBox(height: 8),
+          Text(
+            'Finding your location...',
+            style: TextStyle(fontWeight: FontWeight.w700),
+          ),
+        ],
       ),
     );
   }
@@ -188,7 +176,10 @@ class _ExploreMapLabel extends StatelessWidget {
           children: [
             Icon(Icons.open_in_full_rounded, size: 17),
             SizedBox(width: 6),
-            Text('Explore map', style: TextStyle(fontWeight: FontWeight.w700)),
+            Text(
+              'View my location',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
           ],
         ),
       ),
@@ -197,25 +188,17 @@ class _ExploreMapLabel extends StatelessWidget {
 }
 
 class _InteractiveMissionMapPage extends StatelessWidget {
-  const _InteractiveMissionMapPage({
-    required this.focus,
-    required this.currentLocation,
-    required this.mysteryRadiusMetres,
-  });
+  const _InteractiveMissionMapPage({required this.currentLocation});
 
-  final AppLocation focus;
   final AppLocation? currentLocation;
-  final double mysteryRadiusMetres;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Mystery map')),
+      appBar: AppBar(title: const Text('My location')),
       body: LayoutBuilder(
         builder: (context, constraints) => MissionMap(
-          focus: focus,
           currentLocation: currentLocation,
-          mysteryRadiusMetres: mysteryRadiusMetres,
           height: constraints.maxHeight,
           borderRadius: 0,
           interactive: true,

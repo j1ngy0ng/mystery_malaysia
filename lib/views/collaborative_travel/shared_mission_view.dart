@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../controllers/collaborative_travel/collaborative_travel_controller.dart';
-import '../../models/active_mission/app_location.dart';
 import '../../models/collaborative_travel/mission_participant.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
-import '../widgets/mission_map.dart';
 import '../widgets/status_pill.dart';
 
 class SharedMissionView extends StatefulWidget {
@@ -97,30 +95,20 @@ class _SharedMissionViewState extends State<SharedMissionView> {
                   ),
                 ),
               const SizedBox(height: 26),
-              Text(
-                'Gathering check',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 10),
-              const MissionMap(
-                focus: AppLocation(latitude: 3.14795, longitude: 101.71320),
-                height: 190,
-                mysteryRadiusMetres: 250,
-              ),
-              const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: AppColors.paleMango,
+                  color: AppColors.paleTeal,
                   borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                 ),
                 child: const Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.social_distance_rounded),
+                    Icon(Icons.location_on_outlined, color: AppColors.teal),
                     SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        'One member is 380 m away. Gather within 250 m to start.',
+                        'Team locations are not shown. Each traveller’s GPS is checked only when they confirm arrival at the hidden destination.',
                         style: TextStyle(fontWeight: FontWeight.w700),
                       ),
                     ),
@@ -222,9 +210,9 @@ class _ParticipantTile extends StatelessWidget {
         Icons.check_circle_rounded,
         AppColors.green,
       ),
-      ParticipantState.nearby => (
-        'Nearby',
-        Icons.near_me_rounded,
+      ParticipantState.waiting => (
+        'Waiting',
+        Icons.hourglass_top_rounded,
         AppColors.sky,
       ),
       ParticipantState.invited => (

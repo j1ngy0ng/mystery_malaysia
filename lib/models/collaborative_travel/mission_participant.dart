@@ -1,4 +1,4 @@
-enum ParticipantState { ready, nearby, invited }
+enum ParticipantState { ready, waiting, invited }
 
 class MissionParticipant {
   const MissionParticipant({

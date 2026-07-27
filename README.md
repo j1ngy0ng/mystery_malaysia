@@ -15,7 +15,9 @@ An interactive mobile travel mystery game built with Flutter.
 
 The local configuration file is ignored by Git. Never put a Supabase secret
 key, service-role key, or Gemini key in the Flutter project. `GEMINI_API_KEY`
-belongs in Supabase Edge Function secrets.
+and the server-restricted `GOOGLE_PLACES_API_KEY` belong in Supabase Edge
+Function secrets. The Android Maps SDK key remains in
+`android/local.properties`.
 
 To link the repository, apply migrations and deploy `generate-mission`, run:
 

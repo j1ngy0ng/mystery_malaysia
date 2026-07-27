@@ -64,7 +64,7 @@ class MissionDiscoveryController extends ChangeNotifier {
       duration: '4h 15m',
       budget: 'RM 90',
       difficulty: 'Medium',
-      stops: 4,
+      stops: 3,
       colorValue: 0xFF12B8A6,
       iconKey: 'forest',
     ),

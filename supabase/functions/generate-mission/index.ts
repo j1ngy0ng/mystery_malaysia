@@ -1,5 +1,7 @@
 import { withSupabase } from "npm:@supabase/server@1.4.1";
 
+const STOPS_PER_MISSION = 3;
+
 type MissionInput = {
   origin_latitude: number;
   origin_longitude: number;
@@ -26,14 +28,9 @@ type DestinationCandidate = {
   google_user_rating_count: number | null;
   safety_score: number | null;
   discovery_score: number | null;
+  capacity_per_slot: number;
   selection_score: number;
   distance_km: number;
-};
-
-type GroundedPlace = {
-  placeId: string;
-  title: string;
-  uri: string;
 };
 
 type PlaceDetails = {
@@ -57,7 +54,7 @@ type PlaceDetails = {
 
 type DiscoveryResult = {
   candidates: DestinationCandidate[];
-  mode: "maps_grounded" | "curated_fallback";
+  mode: "places_nearby" | "curated_fallback";
   warning?: string;
 };
 
@@ -116,8 +113,8 @@ const responseSchema = {
           tags: { type: "ARRAY", items: { type: "STRING" } },
           destination_ids: {
             type: "ARRAY",
-            minItems: 1,
-            maxItems: 4,
+            minItems: STOPS_PER_MISSION,
+            maxItems: STOPS_PER_MISSION,
             items: { type: "STRING" },
           },
         },
@@ -195,11 +192,11 @@ export default {
       requestId = missionRequest.id;
 
       await expireOldReservations(admin);
-      const [historyIds, liveAllocationIds] = await Promise.all([
+      const [historyIds, fullDestinationIds] = await Promise.all([
         loadUserDestinationHistory(admin, userId),
-        loadLiveAllocationDestinationIds(admin),
+        loadFullDestinationIds(admin),
       ]);
-      const excludedIds = new Set([...historyIds, ...liveAllocationIds]);
+      const excludedIds = new Set([...historyIds, ...fullDestinationIds]);
 
       const discovery = await discoverCandidates({
         admin,
@@ -213,7 +210,7 @@ export default {
       });
       const candidates = discovery.candidates;
 
-      if (candidates.length === 0) {
+      if (candidates.length < STOPS_PER_MISSION) {
         await admin
           .from("mission_requests")
           .update({ status: "no_match" })
@@ -223,7 +220,7 @@ export default {
           recommendations: [],
           discovery_mode: discovery.mode,
           message:
-            "No new tourist-suitable destinations were found nearby. Try another area or a larger distance.",
+            "Fewer than three new tourist-suitable destinations were found nearby. Try another area or a larger distance.",
         });
       }
 
@@ -284,25 +281,18 @@ export default {
         if (stopError) throw stopError;
 
         const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
-        const { error: allocationError } = await admin
-          .from("destination_allocations")
-          .insert(
-            destination_ids.map((destinationId) => ({
-              destination_id: destinationId,
-              user_id: userId,
-              request_id: requestId,
-              recommendation_id: saved.id,
-              status: "reserved",
-              expires_at: expiresAt,
-            })),
-          );
-        if (allocationError) {
-          // Another request won the reservation race. Remove this route and
-          // continue with another recommendation rather than overcrowding it.
-          await admin
-            .from("destination_allocations")
-            .delete()
-            .eq("recommendation_id", saved.id);
+        const reserved = await reserveRecommendationDestinations({
+          admin,
+          destinationIds: destination_ids,
+          userId,
+          requestId,
+          recommendationId: saved.id,
+          expiresAt,
+        });
+        if (!reserved) {
+          // Another request filled one venue while this route was being saved.
+          // Release this route's partial reservations and try the next choice.
+          await releaseRecommendationReservations(admin, saved.id);
           await admin
             .from("mission_recommendations")
             .delete()
@@ -315,7 +305,7 @@ export default {
           recommendation_id: saved.id,
           event_type: "generated",
           ai_model: geminiResult.model,
-          prompt_version: "mission-v2-maps-grounded",
+          prompt_version: "mission-v4-three-stops",
           payload: {
             candidate_count: candidates.length,
             discovery_mode: discovery.mode,
@@ -380,7 +370,7 @@ export default {
           request_id: requestId,
           event_type: "failed",
           ai_model: Deno.env.get("GEMINI_MODEL") ?? "automatic-fallback",
-          prompt_version: "mission-v2-maps-grounded",
+          prompt_version: "mission-v4-three-stops",
           payload: { reason },
         });
       }
@@ -441,19 +431,86 @@ async function loadUserDestinationHistory(
   );
 }
 
-async function loadLiveAllocationDestinationIds(
+async function loadFullDestinationIds(
   admin: any,
 ): Promise<Set<string>> {
-  const { data, error } = await admin
-    .from("destination_allocations")
-    .select("destination_id")
-    .in("status", ["reserved", "active"]);
-  if (error) throw error;
+  const [{ data: allocations, error: allocationError }, {
+    data: destinations,
+    error: destinationError,
+  }] = await Promise.all([
+    admin
+      .from("destination_allocations")
+      .select("destination_id")
+      .in("status", ["reserved", "active"]),
+    admin
+      .from("destinations")
+      .select("id,capacity_per_slot")
+      .eq("active", true),
+  ]);
+  if (allocationError) throw allocationError;
+  if (destinationError) throw destinationError;
+
+  const counts = new Map<string, number>();
+  for (const item of allocations ?? []) {
+    counts.set(
+      item.destination_id,
+      (counts.get(item.destination_id) ?? 0) + 1,
+    );
+  }
   return new Set(
-    (data ?? []).map(
-      (item: { destination_id: string }) => item.destination_id,
-    ),
+    (destinations ?? [])
+      .filter((item: { id: string; capacity_per_slot: number }) =>
+        (counts.get(item.id) ?? 0) >= item.capacity_per_slot
+      )
+      .map((item: { id: string }) => item.id),
   );
+}
+
+async function reserveRecommendationDestinations({
+  admin,
+  destinationIds,
+  userId,
+  requestId,
+  recommendationId,
+  expiresAt,
+}: {
+  admin: any;
+  destinationIds: string[];
+  userId: string;
+  requestId: string;
+  recommendationId: string;
+  expiresAt: string;
+}): Promise<boolean> {
+  for (const destinationId of destinationIds) {
+    const { data, error } = await admin.rpc(
+      "reserve_destination_capacity",
+      {
+        p_destination_id: destinationId,
+        p_user_id: userId,
+        p_request_id: requestId,
+        p_recommendation_id: recommendationId,
+        p_expires_at: expiresAt,
+      },
+    );
+    if (error) throw error;
+    if (!data) return false;
+  }
+  return true;
+}
+
+async function releaseRecommendationReservations(
+  admin: any,
+  recommendationId: string,
+): Promise<void> {
+  const { error } = await admin
+    .from("destination_allocations")
+    .update({
+      status: "released",
+      released_at: new Date().toISOString(),
+    })
+    .eq("recommendation_id", recommendationId)
+    .eq("status", "reserved");
+  if (error) throw error;
 }
 
 async function discoverCandidates({
@@ -476,33 +533,22 @@ async function discoverCandidates({
   userId: string;
 }): Promise<DiscoveryResult> {
   try {
-    let groundedPlaces: GroundedPlace[];
+    let details: PlaceDetails[];
     try {
-      groundedPlaces = await discoverGroundedPlaces({
-        apiKey,
+      details = await searchNearbyPlaces({
+        apiKey: Deno.env.get("GOOGLE_PLACES_API_KEY")?.trim() || apiKey,
         input,
         categories,
         maximumDistanceKm,
       });
     } catch (error) {
-      throw new Error(`maps_grounding: ${safeErrorMessage(error)}`);
-    }
-
-    let details: PlaceDetails[];
-    try {
-      details = await loadPlaceDetails(
-        groundedPlaces,
-        Deno.env.get("GOOGLE_PLACES_API_KEY")?.trim() || apiKey,
-      );
-    } catch (error) {
-      throw new Error(`place_details: ${safeErrorMessage(error)}`);
+      throw new Error(`places_nearby: ${safeErrorMessage(error)}`);
     }
 
     let dynamicCandidates: DestinationCandidate[];
     try {
       dynamicCandidates = await cacheEligiblePlaces({
         admin,
-        groundedPlaces,
         details,
         input,
         categories,
@@ -517,15 +563,15 @@ async function discoverCandidates({
     if (dynamicCandidates.length > 0) {
       return {
         candidates: dynamicCandidates,
-        mode: "maps_grounded",
+        mode: "places_nearby",
       };
     }
     throw new Error(
-      "Maps grounding returned no places that passed tourist-suitability checks.",
+      "Nearby Search returned no places that passed tourist-suitability checks.",
     );
   } catch (error) {
     const warning = safeErrorMessage(error);
-    console.warn("Maps-grounded discovery unavailable; using curated cache:", warning);
+    console.warn("Places discovery unavailable; using curated cache:", warning);
     return {
       candidates: await loadCuratedCandidates({
         admin,
@@ -541,7 +587,7 @@ async function discoverCandidates({
   }
 }
 
-async function discoverGroundedPlaces({
+async function searchNearbyPlaces({
   apiKey,
   input,
   categories,
@@ -551,150 +597,134 @@ async function discoverGroundedPlaces({
   input: MissionInput;
   categories: string[];
   maximumDistanceKm: number;
-}): Promise<GroundedPlace[]> {
-  const configuredModel = Deno.env.get("GEMINI_MAPS_MODEL")?.trim();
-  const models = configuredModel
-    ? [configuredModel]
-    : ["gemini-3.5-flash", "gemini-2.5-flash", "gemini-3.6-flash"];
-  const prompt = [
-    "Find 12 to 18 real, lesser-known Malaysian places suitable for a playful mystery tourism mission.",
-    "You must use the Google Maps grounding tool to find and verify the places.",
-    `Search within ${maximumDistanceKm} km of latitude ${input.origin_latitude}, longitude ${input.origin_longitude}.`,
-    categories.length > 0
-      ? `Prefer these interests when possible: ${categories.join(", ")}.`
-      : "Balance culture, local food, history, nature, arts and hidden public attractions.",
-    "Prioritise places with enough trustworthy public information but lower visitor exposure than famous landmarks.",
-    "Only include publicly accessible, tourist-appropriate places. Exclude private homes, schools, hospitals, bars, nightclubs, accommodation, dangerous or remote wilderness, and places that appear closed.",
-    "Do not create an itinerary or reveal clues. Briefly explain the variety of the real places you found.",
-  ].join("\n");
-
-  let lastError: Error | null = null;
-  for (const model of models) {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${
-        encodeURIComponent(model)
-      }:generateContent`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": apiKey,
-        },
-        body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
-          tools: [{ googleMaps: {} }],
-          toolConfig: {
-            retrievalConfig: {
-              latLng: {
-                latitude: input.origin_latitude,
-                longitude: input.origin_longitude,
-              },
-            },
-          },
-        }),
-      },
-    );
-
-    if (!response.ok) {
-      const error = new Error(
-        `Gemini Maps model ${model} failed (${response.status}): ${
-          await googleErrorDetail(response)
-        }`,
-      );
-      if ([404, 429].includes(response.status) && !configuredModel) {
-        lastError = error;
-        continue;
-      }
-      throw error;
-    }
-
-    const payload = await response.json();
-    const chunks = payload?.candidates?.[0]?.groundingMetadata
-      ?.groundingChunks;
-    const unique = new Map<string, GroundedPlace>();
-    if (Array.isArray(chunks)) {
-      for (const chunk of chunks) {
-        const maps = chunk?.maps;
-        const placeId = normalizePlaceId(maps?.placeId);
-        if (!placeId || unique.has(placeId)) continue;
-        unique.set(placeId, {
-          placeId,
-          title: cleanText(maps?.title, 180, "Malaysian hidden gem"),
-          uri: typeof maps?.uri === "string" ? maps.uri : "",
-        });
-      }
-    }
-    if (unique.size > 0) return [...unique.values()].slice(0, 18);
-    lastError = new Error(
-      `Gemini Maps model ${model} returned no grounded place IDs.`,
-    );
-  }
-  throw lastError ?? new Error("No Maps-grounded Gemini model was available.");
-}
-
-async function loadPlaceDetails(
-  groundedPlaces: GroundedPlace[],
-  apiKey: string,
-): Promise<PlaceDetails[]> {
+}): Promise<PlaceDetails[]> {
+  const categoryTypes: Record<string, string[]> = {
+    Culture: [
+      "museum",
+      "art_gallery",
+      "cultural_landmark",
+      "mosque",
+      "church",
+      "hindu_temple",
+      "buddhist_temple",
+      "synagogue",
+    ],
+    Food: ["restaurant", "cafe", "market"],
+    Nature: ["park", "botanical_garden", "hiking_area"],
+    History: ["historical_landmark", "museum", "monument"],
+    "Hidden gems": [
+      "tourist_attraction",
+      "scenic_spot",
+      "cultural_landmark",
+    ],
+  };
+  const broadTypes = [
+    "museum",
+    "art_gallery",
+    "park",
+    "tourist_attraction",
+    "historical_landmark",
+    "mosque",
+    "church",
+    "hindu_temple",
+    "buddhist_temple",
+    "synagogue",
+    "restaurant",
+    "cafe",
+  ];
+  const requestedTypes = [...new Set(
+    categories.flatMap((category) => categoryTypes[category] ?? []),
+  )];
+  const searchGroups = requestedTypes.length > 0
+    ? [requestedTypes, broadTypes]
+    : [broadTypes];
   const fieldMask = [
-    "id",
-    "displayName",
-    "formattedAddress",
-    "addressComponents",
-    "location",
-    "types",
-    "primaryType",
-    "businessStatus",
-    "rating",
-    "userRatingCount",
-    "currentOpeningHours",
-    "accessibilityOptions",
-    "googleMapsUri",
+    "places.id",
+    "places.displayName",
+    "places.formattedAddress",
+    "places.addressComponents",
+    "places.location",
+    "places.types",
+    "places.primaryType",
+    "places.businessStatus",
+    "places.rating",
+    "places.userRatingCount",
+    "places.currentOpeningHours",
+    "places.accessibilityOptions",
+    "places.googleMapsUri",
   ].join(",");
-  const results = await Promise.allSettled(
-    groundedPlaces.slice(0, 15).map(async (place) => {
+  const radiusMetres = Math.min(maximumDistanceKm * 1000, 50000);
+
+  const searches = await Promise.allSettled(
+    searchGroups.map(async (types) => {
       const response = await fetch(
-        `https://places.googleapis.com/v1/places/${
-          encodeURIComponent(place.placeId)
-        }`,
+        "https://places.googleapis.com/v1/places:searchNearby",
         {
+          method: "POST",
           headers: {
+            "Content-Type": "application/json",
             "X-Goog-Api-Key": apiKey,
             "X-Goog-FieldMask": fieldMask,
           },
+          body: JSON.stringify({
+            includedTypes: types,
+            excludedTypes: [
+              "bar",
+              "night_club",
+              "lodging",
+              "hospital",
+              "school",
+            ],
+            maxResultCount: 20,
+            rankPreference: "DISTANCE",
+            locationRestriction: {
+              circle: {
+                center: {
+                  latitude: input.origin_latitude,
+                  longitude: input.origin_longitude,
+                },
+                radius: radiusMetres,
+              },
+            },
+            languageCode: "en",
+            regionCode: "MY",
+          }),
         },
       );
       if (!response.ok) {
         throw new Error(
-          `Google Places details failed (${response.status}): ${
+          `Google Places Nearby Search failed (${response.status}): ${
             await googleErrorDetail(response)
           }`,
         );
       }
-      return await response.json() as PlaceDetails;
+      const payload = await response.json();
+      return Array.isArray(payload?.places)
+        ? payload.places as PlaceDetails[]
+        : [];
     }),
   );
 
-  const details = results
-    .filter(
-      (result): result is PromiseFulfilledResult<PlaceDetails> =>
-        result.status === "fulfilled",
-    )
-    .map((result) => result.value);
-  if (details.length === 0) {
-    const firstFailure = results.find(
+  const unique = new Map<string, PlaceDetails>();
+  for (const result of searches) {
+    if (result.status !== "fulfilled") continue;
+    for (const place of result.value) {
+      const placeId = normalizePlaceId(place.id);
+      if (placeId && !unique.has(placeId)) unique.set(placeId, place);
+    }
+  }
+  if (unique.size === 0) {
+    const failure = searches.find(
       (result): result is PromiseRejectedResult =>
         result.status === "rejected",
     );
-    throw firstFailure?.reason ??
-      new Error("Google Places returned no usable place details.");
+    throw failure?.reason ?? new Error("Nearby Search returned no places.");
   }
-  return details;
+  return [...unique.values()];
 }
 
 async function cacheEligiblePlaces({
   admin,
-  groundedPlaces,
   details,
   input,
   categories,
@@ -704,7 +734,6 @@ async function cacheEligiblePlaces({
   userId,
 }: {
   admin: any;
-  groundedPlaces: GroundedPlace[];
   details: PlaceDetails[];
   input: MissionInput;
   categories: string[];
@@ -713,9 +742,6 @@ async function cacheEligiblePlaces({
   requestId: string;
   userId: string;
 }): Promise<DestinationCandidate[]> {
-  const groundedById = new Map(
-    groundedPlaces.map((place) => [place.placeId, place]),
-  );
   const eligibleRows = details.flatMap((place) => {
     const latitude = place.location?.latitude;
     const longitude = place.location?.longitude;
@@ -764,7 +790,6 @@ async function cacheEligiblePlaces({
       0.30 * safetyScore +
       0.15 * distanceFit +
       0.10 * categoryMatch;
-    const grounded = groundedById.get(placeId);
     const state = addressPart(
       place,
       "administrative_area_level_1",
@@ -780,7 +805,7 @@ async function cacheEligiblePlaces({
     return [{
       external_place_id: `google:${placeId}`,
       name: cleanText(
-        place.displayName?.text ?? grounded?.title,
+        place.displayName?.text,
         180,
         "Malaysian hidden gem",
       ),
@@ -800,7 +825,7 @@ async function cacheEligiblePlaces({
       facts: [],
       popularity_score: popularityIndex(ratingCount),
       active: true,
-      google_maps_uri: place.googleMapsUri || grounded?.uri || null,
+      google_maps_uri: place.googleMapsUri ?? null,
       formatted_address: place.formattedAddress ?? null,
       primary_type: place.primaryType ?? null,
       google_rating: rating,
@@ -809,11 +834,14 @@ async function cacheEligiblePlaces({
       safety_status: "automated_review",
       safety_score: roundScore(safetyScore),
       discovery_score: roundScore(discoveryScore),
-      capacity_per_slot: 1,
+      capacity_per_slot: destinationCapacity(
+        place.types ?? [],
+        ratingCount,
+      ),
       daylight_only: daylightOnly,
       source_metadata: {
-        source: "google_maps_grounding_and_places",
-        discovered_by: "gemini",
+        source: "google_places_nearby",
+        discovered_by: "google_places",
         google_place_id: placeId,
         suitability_note:
           "Automated tourist-suitability signal; not a guarantee of personal safety.",
@@ -838,7 +866,8 @@ async function cacheEligiblePlaces({
     .select(
       "id,external_place_id,name,state,city,latitude,longitude,categories," +
         "estimated_budget_myr,estimated_duration_minutes,google_maps_uri," +
-        "google_rating,google_user_rating_count,safety_score,discovery_score",
+        "google_rating,google_user_rating_count,safety_score,discovery_score," +
+        "capacity_per_slot",
     );
   if (upsertError) throw upsertError;
 
@@ -856,7 +885,7 @@ async function cacheEligiblePlaces({
       clue_type: "observation",
       title: "A hidden corner is calling",
       prompt:
-        "Follow the mystery zone on the map. Your live location will verify the destination when you arrive.",
+        "Use the clue to explore. The map shows only your location, and GPS verifies the destination when you arrive.",
       accepted_answers: [],
       validation_rules: {
         verification: "location",
@@ -866,8 +895,8 @@ async function cacheEligiblePlaces({
         `Look for a ${typeHint} around ${source?.city ?? "your nearby area"}.`,
       clue_xp_reward: 100,
       hint_xp_cost: 20,
-      ai_model: "gemini-maps-grounded",
-      prompt_version: "dynamic-location-v1",
+      ai_model: null,
+      prompt_version: "places-nearby-location-v1",
     };
   });
   const { error: clueError } = await admin
@@ -912,6 +941,7 @@ async function loadCuratedCandidates({
       "id,external_place_id,name,state,city,latitude,longitude,categories," +
         "estimated_budget_myr,estimated_duration_minutes,google_maps_uri," +
         "google_rating,google_user_rating_count,safety_score,discovery_score," +
+        "capacity_per_slot," +
         "destination_clues!inner(destination_id)",
     )
     .eq("active", true)
@@ -972,7 +1002,7 @@ async function callGemini({
     "You design bright, playful mystery tourism missions in Malaysia.",
     "Choose only destination IDs from the supplied candidate list.",
     "Never invent an ID. Do not reveal destination names in titles, hooks, or explanations.",
-    "Create one to three varied recommendations with one to four unique stops each.",
+    `Create one to three varied recommendations with exactly ${STOPS_PER_MISSION} unique stops each.`,
     `User constraints: ${JSON.stringify({
       available_minutes: input.available_minutes,
       budget_myr: input.budget_myr,
@@ -1174,6 +1204,40 @@ function estimatedDuration(types: string[]): number {
   return 60;
 }
 
+function destinationCapacity(types: string[], ratingCount: number): number {
+  let capacity = 3;
+  if (
+    types.some((type) =>
+      [
+        "park",
+        "botanical_garden",
+        "nature_preserve",
+        "hiking_area",
+        "scenic_spot",
+      ].includes(type)
+    )
+  ) {
+    capacity = 7;
+  } else if (
+    types.some((type) =>
+      ["museum", "market", "tourist_attraction"].includes(type)
+    )
+  ) {
+    capacity = 5;
+  } else if (
+    types.some((type) =>
+      ["restaurant", "food_court", "cafe"].includes(type)
+    )
+  ) {
+    capacity = 4;
+  }
+
+  // A small evidence footprint may also indicate a small venue.
+  if (ratingCount < 20) capacity = Math.min(capacity, 3);
+  if (ratingCount >= 1000) capacity += 1;
+  return Math.round(clamp(capacity, 2, 8));
+}
+
 function isDaylightOnly(types: string[]): boolean {
   return types.some((type) =>
     [
@@ -1265,8 +1329,8 @@ function validateRecommendations(
     const destinationIds = [...new Set(item.destination_ids ?? [])]
       .filter((id) => allowedIds.has(id))
       .filter((id) => !globallyUsedIds.has(id))
-      .slice(0, 4);
-    if (destinationIds.length === 0) continue;
+      .slice(0, STOPS_PER_MISSION);
+    if (destinationIds.length !== STOPS_PER_MISSION) continue;
     destinationIds.forEach((id) => globallyUsedIds.add(id));
 
     results.push({
@@ -1387,38 +1451,17 @@ function safeErrorMessage(error: unknown): string {
 }
 
 function discoveryFallbackWarning(reason: string): string {
-  if (reason.startsWith("place_details:")) {
-    return "Gemini found real places, but Google Places Details could not verify them. Add a server-side GOOGLE_PLACES_API_KEY with Places API (New) and billing enabled. This request used the curated safety catalogue.";
-  }
   if (reason.startsWith("supabase_cache:")) {
     return "Live places were verified but could not be cached in Supabase. This request used the curated safety catalogue.";
   }
-  if (reason.startsWith("maps_grounding:")) {
+  if (reason.startsWith("places_nearby:")) {
+    if (reason.includes("(403)")) {
+      return "Live discovery needs a server-side GOOGLE_PLACES_API_KEY with Places API (New) and billing enabled. This request used the curated safety catalogue.";
+    }
     if (reason.includes("(429)")) {
-      return "Gemini Maps grounding is temporarily over its quota. This request used the curated safety catalogue.";
+      return "Google Places is temporarily over its request quota. This request used the curated safety catalogue.";
     }
-    if (reason.includes("(404)")) {
-      return "The configured Gemini project has no available Maps-grounding model. This request used the curated safety catalogue.";
-    }
-    if (reason.includes("returned no grounded place IDs")) {
-      return "Gemini did not return Maps-grounded place IDs for this search. This request used the curated safety catalogue.";
-    }
-    return "The current Gemini server key or model could not use Google Maps grounding. This request used the curated safety catalogue.";
-  }
-  if (reason.includes("Google Places details failed (403)")) {
-    return "Live discovery needs a server-side Google Places API key with Places API (New) and billing enabled. This request used the curated safety catalogue.";
-  }
-  if (reason.includes("Google Places details failed")) {
-    return "Google Places Details could not verify the grounded places. Check the server Places API key, Places API (New), and billing. This request used the curated safety catalogue.";
-  }
-  if (reason.includes("Gemini Maps model") && reason.includes("(403)")) {
-    return "Gemini Maps grounding is not allowed by the current server key. This request used the curated safety catalogue.";
-  }
-  if (reason.includes("Gemini Maps model") && reason.includes("(400)")) {
-    return "The current Gemini model or project does not support Google Maps grounding. This request used the curated safety catalogue.";
-  }
-  if (reason.includes("returned no grounded place IDs")) {
-    return "Gemini found no Maps-grounded places for this location. This request used the curated safety catalogue.";
+    return "Google Places Nearby Search was unavailable. Check the server Places key and API restrictions. This request used the curated safety catalogue.";
   }
   if (reason.includes("tourist-suitability checks")) {
     return "No live places passed the tourist-suitability checks. This request used the curated safety catalogue.";
@@ -1430,7 +1473,7 @@ function discoveryFallbackWarning(reason: string): string {
   ) {
     return "Live places were found but could not be cached in Supabase. This request used the curated safety catalogue.";
   }
-  return "Live Maps discovery was temporarily unavailable, so this request used the curated safety catalogue.";
+  return "Live Places discovery was temporarily unavailable, so this request used the curated safety catalogue.";
 }
 
 function publicGenerationError(error: unknown): string {

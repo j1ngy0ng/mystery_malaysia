@@ -14,7 +14,7 @@ class CollaborativeTravelController extends ChangeNotifier {
     MissionParticipant(
       name: 'Kumar',
       initials: 'KU',
-      state: ParticipantState.nearby,
+      state: ParticipantState.waiting,
       isHost: false,
       colorValue: 0xFF6C4CE6,
     ),
