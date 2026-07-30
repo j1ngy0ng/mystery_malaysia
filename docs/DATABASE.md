@@ -13,7 +13,7 @@ organization; PostgreSQL relationships remain normalized across modules.
 ## 1. Core cardinality rules
 
 ```text
-Mission request       1 -> 0..3 recommendations
+Successful request    1 -> exactly 3 recommendations
 Recommendation        1 -> exactly 3 ordered destinations
 Mission session       1 -> 1..many ordered stages
 Mission stage         1 -> 1 hidden destination
@@ -153,7 +153,7 @@ Email, phone number, password hashes, providers and sessions remain in
 | `destination_allocations` | Server-only reservation/history record used to distribute explorers | An atomic database function permits live allocations only while the destination remains below its `capacity_per_slot` |
 | `mission_templates` | Optional administrator-controlled mission generation rules | Stop, duration and budget ranges are validated |
 | `mission_requests` | Immutable snapshot of one recommendation request | Contains location, time, budget, distance, categories, style, state and group constraints |
-| `mission_recommendations` | Up to three safe mission choices shown to the requester | `unique(request_id, recommendation_rank)` |
+| `mission_recommendations` | Exactly three safe mission choices shown after successful generation | `unique(request_id, recommendation_rank)` |
 | `mission_recommendation_stops` | Three server-only ordered hidden destinations for each recommendation | Generation accepts only three unique destinations numbered 1 to 3 |
 | `recommendation_events` | Server-only generation, regeneration, acceptance and failure audit log | Stores AI model, prompt version and payload |
 
@@ -225,18 +225,16 @@ mutable profile total.
 
 | Table | Purpose | Key integrity rule |
 | --- | --- | --- |
-| `invitations` | Direct shared-mission invitation and response | No friendship is required; a user can be invited only once per session |
+| `invitations` | Email-addressed shared-mission invitation and response | No friendship is required; only one pending invitation per email and session |
 | `mission_messages` | Participant text, reactions and system messages | Sender must be a mission participant |
 | `notifications` | In-app notification inbox | The client can update only `read_at` |
 | `command_receipts` | Server-only idempotency results for protected mutations | One result per client `request_id` |
 
-Invitations do not use a friendship table. The `send-invitation` Edge Function
-accepts a username, email address or phone number, resolves it to one
-`auth.users.id`, and stores only that ID as `invitations.invitee_id`. Username
-lookup uses `profiles`; email and phone lookup stays server-side in
-`auth.users`. A generic response should be returned when no account matches so
-the endpoint does not expose whether an email address or phone number is
-registered.
+Invitations do not use a friendship table. The `shared-mission` Edge Function
+accepts only an email address. Registered travellers receive an in-app
+notification. If no account exists, Supabase Auth sends an account-invitation
+email from the trusted server function; the resulting user ID and email are
+stored on the invitation so the traveller can accept it after signing in.
 
 ## 5. Mystery and privacy boundaries
 

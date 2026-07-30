@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 
-import '../views/collaborative_travel/invitations_view.dart';
-import '../views/mission_discovery/explore_view.dart';
-import '../views/mission_discovery/home_view.dart';
-import '../views/passport_diary/passport_view.dart';
-import '../views/user_profile/profile_view.dart';
-import '../views/theme/app_colors.dart';
+import '../controller/active_mission/active_mission_facade_interface.dart';
+import '../controller/collaborative_travel/collaborative_travel_facade_interface.dart';
+import '../controller/passport_diary/passport_diary_facade_interface.dart';
+import '../controller/user_profile/user_profile_facade_interface.dart';
+import '../view/collaborative_travel/invitations_view.dart';
+import '../view/mission_discovery/explore_view.dart';
+import '../view/mission_discovery/home_view.dart';
+import '../view/passport_diary/passport_view.dart';
+import '../view/user_profile/profile_view.dart';
+import '../theme/app_colors.dart';
+import '../controller/app_dependencies.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -16,24 +21,59 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   int index = 0;
+  int homeVersion = 0;
+  late IUserProfileFacade homeProfileFacade;
+  late INotificationFacade homeNotificationFacade;
+  late IMissionHistoryFacade homeMissionFacade;
+  late final IPassportDiaryFacade passportFacade;
+  late final ICollaborativeTravelFacade collaborativeFacade;
+  late final IUserProfileFacade profileFacade;
 
-  static const pages = [
-    HomeView(),
-    ExploreView(),
-    PassportView(),
-    InvitationsView(),
-    ProfileView(),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _createHomeFacades();
+    passportFacade = AppDependencies.passportDiary();
+    collaborativeFacade = AppDependencies.collaborativeTravel();
+    profileFacade = AppDependencies.userProfile();
+  }
+
+  void _createHomeFacades() {
+    homeProfileFacade = AppDependencies.userProfile();
+    homeNotificationFacade = AppDependencies.notifications();
+    homeMissionFacade = AppDependencies.missionHistory();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final pages = [
+      HomeView(
+        key: ValueKey(homeVersion),
+        profileFacade: homeProfileFacade,
+        notificationFacade: homeNotificationFacade,
+        missionFacade: homeMissionFacade,
+      ),
+      const ExploreView(),
+      PassportView(facade: passportFacade),
+      InvitationsView(facade: collaborativeFacade),
+      ProfileView(facade: profileFacade),
+    ];
     return Scaffold(
       body: SafeArea(
         child: IndexedStack(index: index, children: pages),
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: index,
-        onDestinationSelected: (value) => setState(() => index = value),
+        onDestinationSelected: (value) => setState(() {
+          index = value;
+          if (value == 0) {
+            _createHomeFacades();
+            homeVersion++;
+          }
+          if (value == 2) passportFacade.load();
+          if (value == 3) collaborativeFacade.loadOverview();
+          if (value == 4) profileFacade.load();
+        }),
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.home_outlined),

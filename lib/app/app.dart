@@ -1,9 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:app_links/app_links.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../views/theme/app_theme.dart';
+import '../theme/app_theme.dart';
 import 'router.dart';
 
 class MysteryMalaysiaApp extends StatefulWidget {
@@ -23,11 +24,27 @@ class MysteryMalaysiaApp extends StatefulWidget {
 class _MysteryMalaysiaAppState extends State<MysteryMalaysiaApp> {
   final navigatorKey = GlobalKey<NavigatorState>();
   StreamSubscription<AuthState>? authSubscription;
+  StreamSubscription<Uri>? linkSubscription;
 
   @override
   void initState() {
     super.initState();
+    linkSubscription = AppLinks().uriLinkStream.listen((uri) {
+      if (uri.host != 'mission-invite') return;
+      final signedIn = Supabase.instance.client.auth.currentSession != null;
+      navigatorKey.currentState?.pushNamedAndRemoveUntil(
+        signedIn ? '/home' : '/auth/register',
+        (_) => false,
+      );
+    });
     authSubscription = widget.authStateChanges?.listen((authState) {
+      if (authState.event == AuthChangeEvent.passwordRecovery) {
+        navigatorKey.currentState?.pushNamedAndRemoveUntil(
+          '/auth/update-password',
+          (_) => false,
+        );
+        return;
+      }
       if (authState.event != AuthChangeEvent.signedIn ||
           authState.session == null) {
         return;
@@ -39,6 +56,7 @@ class _MysteryMalaysiaAppState extends State<MysteryMalaysiaApp> {
   @override
   void dispose() {
     authSubscription?.cancel();
+    linkSubscription?.cancel();
     super.dispose();
   }
 

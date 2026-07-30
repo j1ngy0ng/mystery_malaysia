@@ -48,11 +48,13 @@ signing in. Database and Gemini actions require an authenticated account.
 
 All implementation must follow [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). It defines feature ownership, dependency boundaries, backend responsibilities, mission state transitions, security rules, and the required source layout.
 
-The UI follows client-side MVC: Views render and forward actions, Controllers
-own interaction state, and Models remain independent of Flutter widgets and
-external providers. Supabase, Google Maps and Gemini integrations are isolated
-under `lib/services/`; Gemini is called only through a protected Supabase Edge
-Function.
+The UI follows facade-mediated client-side MVC. Views depend only on Facade
+interfaces; concrete Facades delegate to Controllers, and Models remain
+independent of Flutter widgets and external providers. The MVC directories
+are `lib/view`, `lib/controller`, and `lib/model`; `lib/app`, `lib/theme`, and
+`lib/widgets` contain shared Flutter support code. Facade interfaces and API
+services are kept inside `lib/controller`; Gemini is called only through a
+protected Supabase Edge Function.
 
 ## Getting Started
 

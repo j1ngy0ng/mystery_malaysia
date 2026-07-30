@@ -1,7 +1,7 @@
 # Mystery Malaysia MVC Architecture
 
 Status: **Accepted — implementation contract**
-Architecture: **Client-side Model–View–Controller (MVC)**
+Architecture: **Facade-mediated client-side Model–View–Controller (MVC)**
 Platform: Flutter mobile application
 External services: Supabase, Google Maps Platform, Gemini API
 
@@ -9,12 +9,14 @@ All production code must follow this document. Update this document whenever an 
 
 ## 1. Architecture decision
 
-The Flutter application uses MVC:
+The Flutter application uses MVC with an interface-based Facade boundary:
 
-- **View:** renders Flutter UI and sends user actions to a Controller.
+- **View:** renders Flutter UI and communicates only through a Facade interface.
+- **Facade interface:** defines the operations and observable state available to a View. It is stored inside its module under `controller/`, not in a separate architecture layer.
+- **Facade implementation:** provides one simplified module entry point and delegates work to Controllers.
 - **Controller:** owns UI/workflow state, validates actions, coordinates Models, and calls API Managers.
 - **Model:** represents application data and deterministic state rules. Models do not render UI or call APIs.
-- **API Managers/Services:** isolate Supabase, Google Maps, Gemini, and device SDK calls. They are supporting infrastructure, not a fourth MVC role.
+- **API Managers/Services:** isolate Supabase, Google Maps, Gemini, and device SDK calls. They live inside the Controller layer as shown in the approved diagram; they are not a fourth MVC layer.
 
 The application has no separately maintained custom server. Supabase is the managed backend. Production Gemini requests pass through a Supabase Edge Function so the Gemini credential is not embedded in the mobile application.
 
@@ -22,53 +24,68 @@ The application has no separately maintained custom server. Supabase is the mana
 
 ```mermaid
 flowchart LR
-    Player["Player"]
 
     subgraph Mobile["Device / Flutter mobile client"]
         subgraph Views["VIEW"]
-            AppView["App composition<br/>MysteryMalaysiaApp · Router · Route guards · App shell"]
-            Theme["Design system<br/>Colors · Spacing · Typography · Material theme"]
             UserProfileView["User and Profile View"]
             MissionDiscoveryView["Mission Discovery View"]
             ActiveMissionView["Active Mission View"]
             PassportDiaryView["Passport and Diary View"]
             ClueHintView["Clue and Hint View"]
             CollaborativeTravelView["Collaborative Travel View"]
-            SharedWidgets["Shared widgets<br/>Buttons · Inputs · Cards · Navigation · Progress<br/>Stamps · Badges · Dialogs · System states"]
         end
 
         subgraph Controllers["CONTROLLER"]
-            UserProfileController["UserProfileController"]
-            DiscoveryController["MissionDiscoveryController"]
-            ActiveController["ActiveMissionController"]
-            PassportDiaryController["PassportDiaryController"]
-            ClueHintController["ClueHintController"]
-            CollaborativeTravelController["CollaborativeTravelController"]
+            subgraph ControllerInterfaces["Interfaces - stored inside each Controller module"]
+                IUserProfileFacade["IUserProfileFacade"]
+                IDiscoveryFacade["IMissionDiscoveryFacade"]
+                IActiveFacade["IActiveMissionFacade"]
+                IPassportFacade["IPassportDiaryFacade"]
+                IClueFacade["IClueHintFacade"]
+                ICollaborativeFacade["ICollaborativeTravelFacade"]
+            end
+
+            subgraph Facades["Facade implementations"]
+                UserProfileFacade["UserProfileFacade"]
+                DiscoveryFacade["MissionDiscoveryFacade"]
+                ActiveFacade["ActiveMissionFacade"]
+                PassportFacade["PassportDiaryFacade"]
+                ClueFacade["ClueHintFacade"]
+                CollaborativeFacade["CollaborativeTravelFacade"]
+            end
+
+            subgraph ModuleControllers["Module controllers"]
+                UserProfileController["UserProfileController"]
+                DiscoveryController["MissionDiscoveryController"]
+                ActiveController["ActiveMissionController"]
+                PassportDiaryController["PassportDiaryController"]
+                ClueHintController["ClueHintController"]
+                CollaborativeTravelController["CollaborativeTravelController"]
+            end
+
+            subgraph Services["Services / API Manager"]
+                AuthService["SupabaseAuthService"]
+                DataService["SupabaseDataService"]
+                StorageService["SupabaseStorageService"]
+                RealtimeService["SupabaseRealtimeService"]
+                MapsService["GoogleMapsService"]
+                GeminiService["GeminiService - invokes protected Supabase function"]
+                LocationService["LocationService"]
+                MediaService["MediaService"]
+                LocalNotificationService["LocalNotificationService"]
+                ApiError["ApiError mapping"]
+                Config["Client configuration"]
+            end
         end
 
         subgraph Models["MODEL"]
-            UserProfileModels["User and Profile Models<br/>UserProfile"]
-            MissionDiscoveryModels["Mission Discovery Models<br/>MissionRequest · MissionRecommendation · SearchConstraints"]
-            ActiveMissionModels["Active Mission Models<br/>MissionSession · MissionStatus · ArrivalEvidence · Mission progress"]
-            PassportDiaryModels["Passport and Diary Models<br/>PassportStamp · Badge · XpEntry · Reflection · DiaryEntry"]
-            ClueHintModels["Clue and Hint Models<br/>Clue · Hint · ClueStatus · ProximityStatus"]
-            CollaborativeTravelModels["Collaborative Travel Models<br/>MissionParticipant · Invitation<br/>ParticipantStatus · InvitationStatus · Notification"]
+            UserProfileModels["User and Profile Models - UserProfile"]
+            MissionDiscoveryModels["Mission Discovery Models - request and recommendations"]
+            ActiveMissionModels["Active Mission Models - session, status and progress"]
+            PassportDiaryModels["Passport and Diary Models - stamps, badges and diary"]
+            ClueHintModels["Clue and Hint Models - clue, hint and progress"]
+            CollaborativeTravelModels["Collaborative Travel Models - participants and invitations"]
         end
-
-        subgraph Services["API MANAGERS / SERVICES"]
-            AuthService["SupabaseAuthService"]
-            DataService["SupabaseDataService"]
-            StorageService["SupabaseStorageService"]
-            RealtimeService["SupabaseRealtimeService"]
-            MapsService["GoogleMapsService"]
-            GeminiService["GeminiService<br/>invokes protected Supabase function"]
-            LocationService["LocationService"]
-            MediaService["MediaService"]
-            LocalNotificationService["LocalNotificationService"]
-            ApiError["ApiError mapping"]
-        end
-
-        Config["Client configuration<br/>Supabase URL · Publishable key · Restricted Maps keys"]
     end
 
     subgraph Supabase["SUPABASE — managed backend"]
@@ -126,53 +143,40 @@ flowchart LR
         SecureStorage["Secure platform storage"]
     end
 
-    Player --> AppView
-    AppView --> UserProfileView
-    AppView --> MissionDiscoveryView
-    AppView --> ActiveMissionView
-    AppView --> PassportDiaryView
-    AppView --> ClueHintView
-    AppView --> CollaborativeTravelView
-    Theme --> UserProfileView
-    Theme --> MissionDiscoveryView
-    Theme --> ActiveMissionView
-    Theme --> PassportDiaryView
-    Theme --> ClueHintView
-    Theme --> CollaborativeTravelView
-    SharedWidgets --> UserProfileView
-    SharedWidgets --> MissionDiscoveryView
-    SharedWidgets --> ActiveMissionView
-    SharedWidgets --> PassportDiaryView
-    SharedWidgets --> ClueHintView
-    SharedWidgets --> CollaborativeTravelView
 
-    UserProfileView -->|"user actions"| UserProfileController
-    UserProfileController -->|"UI state"| UserProfileView
+    UserProfileView -->|"requires"| IUserProfileFacade
+    IUserProfileFacade -.->|"implemented by"| UserProfileFacade
+    UserProfileFacade <-->|"delegates / observes"| UserProfileController
     UserProfileController -->|"reads / updates"| UserProfileModels
     UserProfileModels -->|"data / state"| UserProfileController
 
-    MissionDiscoveryView -->|"user actions"| DiscoveryController
-    DiscoveryController -->|"UI state"| MissionDiscoveryView
+    MissionDiscoveryView -->|"requires"| IDiscoveryFacade
+    IDiscoveryFacade -.->|"implemented by"| DiscoveryFacade
+    DiscoveryFacade <-->|"delegates / observes"| DiscoveryController
     DiscoveryController -->|"reads / updates"| MissionDiscoveryModels
     MissionDiscoveryModels -->|"data / state"| DiscoveryController
 
-    ActiveMissionView -->|"user actions"| ActiveController
-    ActiveController -->|"UI state"| ActiveMissionView
+    ActiveMissionView -->|"requires"| IActiveFacade
+    IActiveFacade -.->|"implemented by"| ActiveFacade
+    ActiveFacade <-->|"delegates / observes"| ActiveController
     ActiveController -->|"reads / updates"| ActiveMissionModels
     ActiveMissionModels -->|"data / state"| ActiveController
 
-    PassportDiaryView -->|"user actions"| PassportDiaryController
-    PassportDiaryController -->|"UI state"| PassportDiaryView
+    PassportDiaryView -->|"requires"| IPassportFacade
+    IPassportFacade -.->|"implemented by"| PassportFacade
+    PassportFacade <-->|"delegates / observes"| PassportDiaryController
     PassportDiaryController -->|"reads / updates"| PassportDiaryModels
     PassportDiaryModels -->|"data / state"| PassportDiaryController
 
-    ClueHintView -->|"user actions"| ClueHintController
-    ClueHintController -->|"UI state"| ClueHintView
+    ClueHintView -->|"requires"| IClueFacade
+    IClueFacade -.->|"implemented by"| ClueFacade
+    ClueFacade <-->|"delegates / observes"| ClueHintController
     ClueHintController -->|"reads / updates"| ClueHintModels
     ClueHintModels -->|"data / state"| ClueHintController
 
-    CollaborativeTravelView -->|"user actions"| CollaborativeTravelController
-    CollaborativeTravelController -->|"UI state"| CollaborativeTravelView
+    CollaborativeTravelView -->|"requires"| ICollaborativeFacade
+    ICollaborativeFacade -.->|"implemented by"| CollaborativeFacade
+    CollaborativeFacade <-->|"delegates / observes"| CollaborativeTravelController
     CollaborativeTravelController -->|"reads / updates"| CollaborativeTravelModels
     CollaborativeTravelModels -->|"data / state"| CollaborativeTravelController
 
@@ -235,8 +239,9 @@ flowchart LR
 ## 3. Allowed communication
 
 ```text
-View ──user action──> Controller
-View <──UI state───── Controller
+View ──user action / state read──> Facade interface
+Facade interface <──implemented by── Facade implementation
+Facade implementation ──delegates / observes──> Controller
 
 Controller ──reads/updates──> Model
 Controller <──data/state───── Model
@@ -247,8 +252,10 @@ Controller <──Model──── API Manager / Service <── External API
 
 Rules:
 
-- Views may import Controllers, Models required for display, shared widgets, and theme.
+- Views may import Facade interfaces, Models required for display, shared widgets, theme, and the app composition factory.
+- Views never import or construct Controllers, concrete Facades, or Services.
 - Views never call Supabase, Google Maps services, Gemini, Storage, or device APIs directly.
+- Concrete Facades wrap Controllers and expose only module-level operations and observable state.
 - Controllers may import Models and Services. They contain no Flutter widget-building code.
 - Models import neither Flutter UI nor Services.
 - Services own all external SDK/API calls and convert responses into Models or typed errors.
@@ -256,74 +263,45 @@ Rules:
 
 ## 4. Required repository organization
 
+The MVC architecture folders are `view`, `controller`, and `model`. The `app`, `theme`, and `widgets` folders are supporting Flutter source folders at the same filesystem level; they are not MVC components and are intentionally omitted from the component diagram.
+
 ```text
-mystery_malaysia/
-├── lib/
-│   ├── main.dart
-│   ├── app/
-│   │   ├── app.dart
-│   │   └── router.dart
-│   ├── views/
-│   │   ├── theme/
-│   │   │   ├── app_colors.dart
-│   │   │   ├── app_spacing.dart
-│   │   │   ├── app_typography.dart
-│   │   │   └── app_theme.dart
-│   │   ├── user_profile/
-│   │   ├── mission_discovery/
-│   │   ├── active_mission/
-│   │   ├── passport_diary/
-│   │   ├── clue_hint/
-│   │   ├── collaborative_travel/
-│   │   └── widgets/
-│   ├── controllers/
-│   │   ├── user_profile/
-│   │   ├── mission_discovery/
-│   │   ├── active_mission/
-│   │   ├── passport_diary/
-│   │   ├── clue_hint/
-│   │   └── collaborative_travel/
-│   ├── models/
-│   │   ├── user_profile/
-│   │   ├── mission_discovery/
-│   │   ├── active_mission/
-│   │   ├── passport_diary/
-│   │   ├── clue_hint/
-│   │   └── collaborative_travel/
-│   ├── services/
-│   │   ├── supabase/
-│   │   ├── google_maps/
-│   │   ├── gemini/
-│   │   └── device/
-│   ├── config/
-│   └── errors/
-├── test/                               # mirrors lib paths
-├── integration_test/
-├── assets/
-│   ├── images/
-│   ├── icons/
-│   └── fonts/
-├── supabase/
-│   ├── config.toml
-│   ├── migrations/
-│   ├── seed.sql
-│   ├── tests/
-│   └── functions/
-│       ├── _shared/
-│       ├── generate-mission/
-│       ├── start-mission/
-│       ├── submit-clue/
-│       ├── confirm-arrival/
-│       ├── complete-mission/
-│       ├── create-shared-mission/
-│       ├── respond-to-invitation/
-│       ├── update-participant/
-│       └── generate-diary/
-└── docs/
-    └── ARCHITECTURE.md
+lib/
+|-- main.dart
+|-- app/                             # application widget, router and shell
+|-- theme/                           # colours, spacing, typography and Material theme
+|-- widgets/                         # reusable Flutter widgets
+|-- view/
+|   |-- user_profile/
+|   |-- mission_discovery/
+|   |-- active_mission/
+|   |-- passport_diary/
+|   |-- clue_hint/
+|   `-- collaborative_travel/
+|-- controller/
+|   |-- app_dependencies.dart
+|   |-- user_profile/                # controller, facade and interface
+|   |-- mission_discovery/           # controller, facade and interface
+|   |-- active_mission/              # controller, facade and interface
+|   |-- passport_diary/              # controller, facade and interface
+|   |-- clue_hint/                    # controller, facade and interface
+|   |-- collaborative_travel/        # controller, facade and interface
+|   `-- services/                    # Services / API Manager box
+|       |-- config/
+|       |-- errors/
+|       |-- supabase/
+|       |-- gemini/
+|       `-- device/
+`-- model/
+    |-- user_profile/
+    |-- mission_discovery/
+    |-- active_mission/
+    |-- passport_diary/
+    |-- clue_hint/
+    `-- collaborative_travel/
 ```
 
-Temporary `.gitkeep` files preserve directories until real components are added. Remove a placeholder when its directory receives code.
+The facade interface for each module remains inside that module's `controller` directory. No separate top-level `interfaces`, `facades`, `services`, `config`, or `errors` folder is allowed.
 
 ### Official module boundaries
 
@@ -339,6 +317,8 @@ Temporary `.gitkeep` files preserve directories until real components are added.
 Naming:
 
 - Views end in `_view.dart`.
+- Facade contracts begin with `I` and end in `Facade`.
+- Facade implementations end in `Facade` and are created only by `app_dependencies.dart`.
 - Controllers end in `_controller.dart`.
 - Models use the entity name, such as `mission_session.dart`.
 - External integrations end in `_service.dart`, such as `supabase_auth_service.dart`.
@@ -349,9 +329,16 @@ Naming:
 ### View
 
 - Build accessible Flutter UI.
-- Display Controller state.
+- Display state exposed by a Facade interface.
 - Forward taps, form submissions, navigation intent, and retry actions.
 - Keep only temporary visual state such as animation or field focus locally.
+
+### Facade interface and implementation
+
+- Define the only operations and observable state available to a View.
+- Hide Controllers, Services, and workflow coordination behind one module-level entry point.
+- Delegate work to Controllers and forward `ChangeNotifier` updates through `Listenable`.
+- Contain no Flutter widget-building code.
 
 ### Controller
 
@@ -378,13 +365,13 @@ Naming:
 
 | API | Client service location | External target |
 | --- | --- | --- |
-| Supabase authentication | `lib/services/supabase/supabase_auth_service.dart` | Supabase Auth |
-| Supabase database/functions | `lib/services/supabase/supabase_data_service.dart` | PostgreSQL and Edge Functions |
-| Supabase file storage | `lib/services/supabase/supabase_storage_service.dart` | Supabase Storage |
-| Supabase realtime | `lib/services/supabase/supabase_realtime_service.dart` | Supabase Realtime |
-| Maps, Places, Routes | `lib/services/google_maps/google_maps_service.dart` | Google Maps Platform |
-| Gemini generation | `lib/services/gemini/gemini_service.dart` | Protected Supabase Edge Function → Gemini |
-| GPS/camera/notifications | `lib/services/device/` | Mobile device APIs |
+| Supabase authentication | `lib/controller/services/supabase/supabase_auth_service.dart` | Supabase Auth |
+| Supabase database/functions | `lib/controller/services/supabase/supabase_data_service.dart` | PostgreSQL and Edge Functions |
+| Supabase file storage | `lib/controller/services/supabase/supabase_storage_service.dart` | Supabase Storage |
+| Supabase realtime | `lib/controller/services/supabase/supabase_realtime_service.dart` | Supabase Realtime |
+| Maps, Places, Routes | `lib/controller/services/google_maps/google_maps_service.dart` | Google Maps Platform |
+| Gemini generation | `lib/controller/services/gemini/gemini_service.dart` | Protected Supabase Edge Function → Gemini |
+| GPS/camera/notifications | `lib/controller/services/device/` | Mobile device APIs |
 
 The Supabase URL and publishable key may be in client configuration. The Supabase service-role key and Gemini credential must never be shipped in the Flutter app. Mobile Maps keys must be restricted by Android package/SHA certificate or iOS bundle identifier and by API.
 
@@ -490,9 +477,9 @@ Public routes are splash, onboarding, and authentication. Other routes require a
 ## 11. Testing and compliance
 
 - Mirror `lib` under `test`.
-- Unit-test Controllers with branching workflow logic and Models with state rules.
+- Unit-test Facades, Controllers with branching workflow logic, and Models with state rules.
 - Widget-test Views and shared widgets.
 - Test Services with provider fakes or the Supabase local stack.
 - Test migrations, RLS, Storage policies, and protected functions.
 
-A change complies when Views contain no API calls, Controllers contain no Flutter widget-building or provider code, Models contain no UI/provider dependencies, and all external integration code is under Services or Supabase Functions.
+A change complies when `lib` has the three MVC directories plus only the approved `app`, `theme`, and `widgets` support directories; Views import Facade interfaces but no Controllers, concrete Facades, or Services; every interface is stored inside its MVC layer; Facades contain no widget-building code; Controllers contain no Flutter widget-building or provider code; Models contain no UI/provider dependencies; and client integrations are under `lib/controller/services`.

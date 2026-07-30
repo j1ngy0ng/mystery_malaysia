@@ -1,6 +1,10 @@
 import { withSupabase } from "npm:@supabase/server@1.4.1";
+import {
+  isLogicalTouristDestination,
+} from "../_shared/destination-policy.ts";
 
 const STOPS_PER_MISSION = 3;
+const MISSION_OPTIONS = 3;
 
 type MissionInput = {
   origin_latitude: number;
@@ -47,9 +51,28 @@ type PlaceDetails = {
   businessStatus?: string;
   rating?: number;
   userRatingCount?: number;
-  currentOpeningHours?: { openNow?: boolean };
+  currentOpeningHours?: {
+    openNow?: boolean;
+    weekdayDescriptions?: string[];
+  };
+  regularOpeningHours?: {
+    weekdayDescriptions?: string[];
+  };
   accessibilityOptions?: Record<string, boolean>;
   googleMapsUri?: string;
+  editorialSummary?: { text?: string };
+  generativeSummary?: {
+    overview?: { text?: string };
+    disclosureText?: { text?: string };
+  };
+  photos?: Array<{
+    name?: string;
+    authorAttributions?: Array<{
+      displayName?: string;
+      uri?: string;
+      photoUri?: string;
+    }>;
+  }>;
 };
 
 type DiscoveryResult = {
@@ -82,8 +105,8 @@ const responseSchema = {
   properties: {
     recommendations: {
       type: "ARRAY",
-      minItems: 1,
-      maxItems: 3,
+      minItems: MISSION_OPTIONS,
+      maxItems: MISSION_OPTIONS,
       items: {
         type: "OBJECT",
         required: [
@@ -210,7 +233,7 @@ export default {
       });
       const candidates = discovery.candidates;
 
-      if (candidates.length < STOPS_PER_MISSION) {
+      if (candidates.length < STOPS_PER_MISSION * MISSION_OPTIONS) {
         await admin
           .from("mission_requests")
           .update({ status: "no_match" })
@@ -220,7 +243,7 @@ export default {
           recommendations: [],
           discovery_mode: discovery.mode,
           message:
-            "Fewer than three new tourist-suitable destinations were found nearby. Try another area or a larger distance.",
+            "Fewer than nine new tourist-suitable destinations were found nearby. Try another area or a larger distance.",
         });
       }
 
@@ -237,7 +260,7 @@ export default {
         input,
       );
 
-      if (validated.length === 0) {
+      if (validated.length !== MISSION_OPTIONS) {
         await admin
           .from("mission_requests")
           .update({ status: "no_match" })
@@ -245,12 +268,24 @@ export default {
         return Response.json({
           request_id: requestId,
           recommendations: [],
-          message: "Gemini could not form a valid route from nearby places.",
+          message:
+            "Gemini could not form three valid mission choices from nearby places.",
         });
       }
+      const routeOptimized = await Promise.all(
+        validated.map((recommendation) =>
+          optimizeRoute(
+            recommendation,
+            candidates,
+            input,
+            Deno.env.get("GOOGLE_ROUTES_API_KEY")?.trim() ||
+              Deno.env.get("GOOGLE_PLACES_API_KEY")?.trim(),
+          )
+        ),
+      );
 
       const savedRecommendations = [];
-      for (const [index, recommendation] of validated.entries()) {
+      for (const [index, recommendation] of routeOptimized.entries()) {
         const { destination_ids, ...publicRecommendation } = recommendation;
         const { data: saved, error: recommendationError } = await admin
           .from("mission_recommendations")
@@ -329,7 +364,11 @@ export default {
         });
       }
 
-      if (savedRecommendations.length === 0) {
+      if (savedRecommendations.length !== MISSION_OPTIONS) {
+        await admin
+          .from("mission_recommendations")
+          .delete()
+          .eq("request_id", requestId);
         await admin
           .from("mission_requests")
           .update({ status: "no_match" })
@@ -603,15 +642,21 @@ async function searchNearbyPlaces({
       "museum",
       "art_gallery",
       "cultural_landmark",
-      "mosque",
-      "church",
-      "hindu_temple",
-      "buddhist_temple",
-      "synagogue",
     ],
-    Food: ["restaurant", "cafe", "market"],
-    Nature: ["park", "botanical_garden", "hiking_area"],
-    History: ["historical_landmark", "museum", "monument"],
+    Food: ["farmers_market", "flea_market", "market"],
+    Nature: [
+      "park",
+      "botanical_garden",
+      "hiking_area",
+      "nature_preserve",
+      "scenic_spot",
+    ],
+    History: [
+      "historical_landmark",
+      "historical_place",
+      "museum",
+      "monument",
+    ],
     "Hidden gems": [
       "tourist_attraction",
       "scenic_spot",
@@ -624,13 +669,12 @@ async function searchNearbyPlaces({
     "park",
     "tourist_attraction",
     "historical_landmark",
-    "mosque",
-    "church",
-    "hindu_temple",
-    "buddhist_temple",
-    "synagogue",
-    "restaurant",
-    "cafe",
+    "historical_place",
+    "cultural_landmark",
+    "botanical_garden",
+    "hiking_area",
+    "nature_preserve",
+    "scenic_spot",
   ];
   const requestedTypes = [...new Set(
     categories.flatMap((category) => categoryTypes[category] ?? []),
@@ -650,8 +694,12 @@ async function searchNearbyPlaces({
     "places.rating",
     "places.userRatingCount",
     "places.currentOpeningHours",
+    "places.regularOpeningHours",
     "places.accessibilityOptions",
     "places.googleMapsUri",
+    "places.editorialSummary",
+    "places.generativeSummary",
+    "places.photos",
   ].join(",");
   const radiusMetres = Math.min(maximumDistanceKm * 1000, 50000);
 
@@ -674,6 +722,20 @@ async function searchNearbyPlaces({
               "lodging",
               "hospital",
               "school",
+              "restaurant",
+              "fast_food_restaurant",
+              "cafe",
+              "coffee_shop",
+              "food_court",
+              "meal_takeaway",
+              "meal_delivery",
+              "shopping_mall",
+              "supermarket",
+              "convenience_store",
+              "apartment_building",
+              "apartment_complex",
+              "condominium_complex",
+              "housing_complex",
             ],
             maxResultCount: 20,
             rankPreference: "DISTANCE",
@@ -751,7 +813,7 @@ async function cacheEligiblePlaces({
       typeof latitude !== "number" ||
       typeof longitude !== "number" ||
       place.businessStatus !== "OPERATIONAL" ||
-      hasExcludedPlaceType(place.types ?? [])
+      !isLogicalTouristDestination(place)
     ) {
       return [];
     }
@@ -789,7 +851,8 @@ async function cacheEligiblePlaces({
     const selectionScore = 0.45 * discoveryScore +
       0.30 * safetyScore +
       0.15 * distanceFit +
-      0.10 * categoryMatch;
+      0.10 * categoryMatch -
+      (place.currentOpeningHours?.openNow === false ? 0.15 : 0);
     const state = addressPart(
       place,
       "administrative_area_level_1",
@@ -801,6 +864,19 @@ async function cacheEligiblePlaces({
       addressPart(place, "administrative_area_level_2", state),
     );
     const daylightOnly = isDaylightOnly(place.types ?? []);
+    const educationalFacts = [
+      place.editorialSummary?.text,
+      place.generativeSummary?.overview?.text,
+    ]
+      .filter((fact): fact is string => Boolean(fact?.trim()));
+    const openingHours = {
+      openNow: place.currentOpeningHours?.openNow,
+      weekdayDescriptions:
+        place.regularOpeningHours?.weekdayDescriptions ??
+          place.currentOpeningHours?.weekdayDescriptions ??
+          [],
+      source: "Google Places",
+    };
 
     return [{
       external_place_id: `google:${placeId}`,
@@ -816,13 +892,21 @@ async function cacheEligiblePlaces({
       categories: mappedCategories,
       estimated_budget_myr: estimatedBudget(place.types ?? []),
       estimated_duration_minutes: estimatedDuration(place.types ?? []),
-      opening_hours: place.currentOpeningHours ?? {},
+      opening_hours: openingHours,
       accessibility: place.accessibilityOptions ?? {},
       visitor_information: {
         formatted_address: place.formattedAddress,
         verification: "Google Places",
+        cultural_etiquette: culturalEtiquette(place.types ?? []),
+        safety_notes: safetyGuidance(place.types ?? [], daylightOnly),
+        educational_source: educationalFacts.length > 0
+          ? "Google Places summary"
+          : "Verified Google Places attributes",
+        summary_disclosure: place.generativeSummary?.disclosureText?.text,
+        photo_name: place.photos?.[0]?.name,
+        photo_attributions: place.photos?.[0]?.authorAttributions ?? [],
       },
-      facts: [],
+      facts: educationalFacts,
       popularity_score: popularityIndex(ratingCount),
       active: true,
       google_maps_uri: place.googleMapsUri ?? null,
@@ -847,6 +931,9 @@ async function cacheEligiblePlaces({
           "Automated tourist-suitability signal; not a guarantee of personal safety.",
         request_id: requestId,
         requested_by_user_id: userId,
+        google_types: place.types ?? [],
+        primary_type: place.primaryType ?? null,
+        has_place_summary: educationalFacts.length > 0,
       },
       source_updated_at: new Date().toISOString(),
       last_place_sync_at: new Date().toISOString(),
@@ -879,24 +966,21 @@ async function cacheEligiblePlaces({
     external_place_id: string;
   }) => {
     const source = sourceByExternalId.get(row.external_place_id);
-    const typeHint = friendlyPlaceType(source?.primary_type);
     return {
       destination_id: row.id,
       clue_type: "observation",
-      title: "A hidden corner is calling",
-      prompt:
-        "Use the clue to explore. The map shows only your location, and GPS verifies the destination when you arrive.",
+      title: "Find this exact hidden stop",
+      prompt: obviousDestinationClue(source),
       accepted_answers: [],
       validation_rules: {
         verification: "location",
         radius_metres: 120,
       },
-      hint_text:
-        `Look for a ${typeHint} around ${source?.city ?? "your nearby area"}.`,
+      hint_text: additionalDestinationHint(source),
       clue_xp_reward: 100,
       hint_xp_cost: 20,
       ai_model: null,
-      prompt_version: "places-nearby-location-v1",
+      prompt_version: "places-specific-location-v2",
     };
   });
   const { error: clueError } = await admin
@@ -941,7 +1025,7 @@ async function loadCuratedCandidates({
       "id,external_place_id,name,state,city,latitude,longitude,categories," +
         "estimated_budget_myr,estimated_duration_minutes,google_maps_uri," +
         "google_rating,google_user_rating_count,safety_score,discovery_score," +
-        "capacity_per_slot," +
+        "capacity_per_slot,safety_status,primary_type,source_metadata," +
         "destination_clues!inner(destination_id)",
     )
     .eq("active", true)
@@ -950,6 +1034,7 @@ async function loadCuratedCandidates({
 
   return (rows ?? [])
     .filter((row: { id: string }) => !excludedIds.has(row.id))
+    .filter(isStoredLogicalDestination)
     .map((row: any) => {
       const distance = distanceKm(
         input.origin_latitude,
@@ -1002,7 +1087,8 @@ async function callGemini({
     "You design bright, playful mystery tourism missions in Malaysia.",
     "Choose only destination IDs from the supplied candidate list.",
     "Never invent an ID. Do not reveal destination names in titles, hooks, or explanations.",
-    `Create one to three varied recommendations with exactly ${STOPS_PER_MISSION} unique stops each.`,
+    `Create exactly ${MISSION_OPTIONS} varied recommendations with exactly ${STOPS_PER_MISSION} unique stops each.`,
+    "Use nine different destination IDs across the full recommendation list; do not reuse a destination between mission choices.",
     `User constraints: ${JSON.stringify({
       available_minutes: input.available_minutes,
       budget_myr: input.budget_myr,
@@ -1094,31 +1180,6 @@ function addressPart(
   return cleanText(component?.longText, 100, fallback);
 }
 
-function hasExcludedPlaceType(types: string[]): boolean {
-  const excluded = new Set([
-    "bar",
-    "night_club",
-    "liquor_store",
-    "lodging",
-    "hotel",
-    "motel",
-    "hostel",
-    "school",
-    "primary_school",
-    "secondary_school",
-    "university",
-    "hospital",
-    "medical_center",
-    "doctor",
-    "police",
-    "funeral_home",
-    "cemetery",
-    "private_guest_room",
-    "apartment_building",
-  ]);
-  return types.some((type) => excluded.has(type));
-}
-
 function categoriesForPlace(types: string[]): string[] {
   const categories = new Set<string>();
   for (const type of types) {
@@ -1128,12 +1189,18 @@ function categoriesForPlace(types: string[]): string[] {
         "art_gallery",
         "cultural_landmark",
         "historical_landmark",
+        "historical_place",
         "place_of_worship",
+        "mosque",
+        "church",
+        "hindu_temple",
+        "buddhist_temple",
+        "synagogue",
       ].includes(type)
     ) {
       categories.add("Culture");
     }
-    if (["historical_landmark", "monument"].includes(type)) {
+    if (["historical_landmark", "historical_place", "monument"].includes(type)) {
       categories.add("History");
     }
     if (
@@ -1149,11 +1216,9 @@ function categoriesForPlace(types: string[]): string[] {
     }
     if (
       [
-        "restaurant",
-        "cafe",
-        "food_court",
+        "farmers_market",
+        "flea_market",
         "market",
-        "bakery",
       ].includes(type)
     ) {
       categories.add("Food");
@@ -1173,11 +1238,28 @@ function categoriesForPlace(types: string[]): string[] {
   return [...categories].slice(0, 5);
 }
 
-function estimatedBudget(types: string[]): number {
-  if (types.some((type) => ["restaurant", "food_court"].includes(type))) {
-    return 35;
+function isStoredLogicalDestination(row: any): boolean {
+  if (row.safety_status === "curated") return true;
+  const metadata = row.source_metadata ?? {};
+  const googleTypes = Array.isArray(metadata.google_types)
+    ? metadata.google_types.filter((type: unknown): type is string =>
+      typeof type === "string"
+    )
+    : [];
+  if (googleTypes.length === 0) {
+    googleTypes.push(row.primary_type ?? "");
   }
-  if (types.some((type) => ["cafe", "bakery"].includes(type))) return 22;
+  return isLogicalTouristDestination({
+    types: googleTypes,
+    primaryType: row.primary_type ?? undefined,
+    userRatingCount: row.google_user_rating_count ?? undefined,
+    editorialSummary: metadata.has_place_summary
+      ? { text: "Available" }
+      : undefined,
+  });
+}
+
+function estimatedBudget(types: string[]): number {
   if (
     types.some((type) =>
       ["museum", "tourist_attraction", "amusement_center"].includes(type)
@@ -1197,9 +1279,6 @@ function estimatedDuration(types: string[]): number {
     )
   ) {
     return 90;
-  }
-  if (types.some((type) => ["restaurant", "food_court"].includes(type))) {
-    return 75;
   }
   return 60;
 }
@@ -1224,12 +1303,6 @@ function destinationCapacity(types: string[], ratingCount: number): number {
     )
   ) {
     capacity = 5;
-  } else if (
-    types.some((type) =>
-      ["restaurant", "food_court", "cafe"].includes(type)
-    )
-  ) {
-    capacity = 4;
   }
 
   // A small evidence footprint may also indicate a small venue.
@@ -1248,6 +1321,84 @@ function isDaylightOnly(types: string[]): boolean {
       "scenic_spot",
     ].includes(type)
   );
+}
+
+function culturalEtiquette(types: string[]): string[] {
+  if (
+    types.some((type) =>
+      [
+        "place_of_worship",
+        "mosque",
+        "church",
+        "hindu_temple",
+        "buddhist_temple",
+        "synagogue",
+      ].includes(type)
+    )
+  ) {
+    return [
+      "Dress modestly and follow the venue's posted visitor rules.",
+      "Remove footwear where requested and avoid interrupting worship.",
+      "Ask before photographing people, ceremonies or restricted interiors.",
+    ];
+  }
+  if (
+    types.some((type) =>
+      ["museum", "art_gallery", "cultural_landmark"].includes(type)
+    )
+  ) {
+    return [
+      "Follow photography signs and do not touch exhibits unless invited.",
+      "Keep voices low around guided visits, ceremonies and learning spaces.",
+    ];
+  }
+  if (types.some((type) => ["market", "neighborhood"].includes(type))) {
+    return [
+      "Respect residents, vendors and private property.",
+      "Ask permission before photographing people or stalls at close range.",
+    ];
+  }
+  if (
+    types.some((type) =>
+      ["park", "hiking_area", "nature_preserve"].includes(type)
+    )
+  ) {
+    return [
+      "Stay on marked paths, carry out litter and do not feed wildlife.",
+      "Give other visitors space and keep noise low in natural areas.",
+    ];
+  }
+  return [
+    "Follow posted rules and ask permission before photographing people.",
+    "Treat staff, residents, worshippers and other visitors respectfully.",
+  ];
+}
+
+function safetyGuidance(
+  types: string[],
+  daylightOnly: boolean,
+): string[] {
+  const notes = [
+    "Visit during published operating hours and follow current staff or site notices.",
+    "Keep valuables secure and use marked pedestrian crossings near traffic.",
+    "Public ratings and automated suitability checks do not guarantee personal safety.",
+  ];
+  if (daylightOnly) {
+    notes.unshift(
+      "Plan this outdoor stop for daylight and check weather conditions before entering.",
+      "Carry water, use suitable footwear and remain on public or marked paths.",
+    );
+  }
+  if (
+    types.some((type) =>
+      ["market", "tourist_attraction", "place_of_worship"].includes(type)
+    )
+  ) {
+    notes.push(
+      "Expect busy periods; keep your group together and use designated entrances.",
+    );
+  }
+  return notes;
 }
 
 function touristSuitabilityScore(
@@ -1289,6 +1440,46 @@ function friendlyPlaceType(value: unknown): string {
   return value.replaceAll("_", " ");
 }
 
+function obviousDestinationClue(
+  destination?: {
+    name?: string;
+    city?: string;
+    state?: string;
+    primary_type?: string;
+    formatted_address?: string;
+  },
+): string {
+  const name = destination?.name?.trim() || "this destination";
+  const type = friendlyPlaceType(destination?.primary_type);
+  const area = destination?.city?.trim() || destination?.state?.trim() ||
+    "your nearby area";
+  const address = destination?.formatted_address?.trim();
+  const initial = name[0]?.toUpperCase() || "?";
+  return `Find the ${type} in ${area} whose name starts with “${initial}”. ` +
+    (address
+      ? `Google lists it at ${address}.`
+      : "Look for its official entrance and matching place signage.");
+}
+
+function additionalDestinationHint(
+  destination?: { name?: string; formatted_address?: string },
+): string {
+  const name = destination?.name?.trim() || "";
+  const words = name.split(/\s+/).filter(Boolean);
+  if (words.length > 1) {
+    return `The destination name has ${words.length} words and ends with “${
+      words.at(-1)
+    }”.`;
+  }
+  return name
+    ? `The destination name has ${[...name].length} characters and starts with “${
+      name[0].toUpperCase()
+    }”.`
+    : `Check the Google-listed address: ${
+      destination?.formatted_address ?? "the nearby visitor area"
+    }.`;
+}
+
 function roundScore(value: number): number {
   return Math.round(value * 1000) / 1000;
 }
@@ -1324,7 +1515,7 @@ function validateRecommendations(
   const globallyUsedIds = new Set<string>();
   const results: GeneratedRecommendation[] = [];
 
-  for (const item of generated.slice(0, 3)) {
+  for (const item of generated.slice(0, MISSION_OPTIONS)) {
     if (!item || typeof item !== "object") continue;
     const destinationIds = [...new Set(item.destination_ids ?? [])]
       .filter((id) => allowedIds.has(id))
@@ -1397,6 +1588,93 @@ function assertNumber(
     value > maximum
   ) {
     throw new Error(`${field} is invalid.`);
+  }
+}
+
+async function optimizeRoute(
+  recommendation: GeneratedRecommendation,
+  candidates: DestinationCandidate[],
+  input: MissionInput,
+  apiKey?: string,
+): Promise<GeneratedRecommendation> {
+  if (!apiKey || recommendation.destination_ids.length !== 3) {
+    return recommendation;
+  }
+  const stops = recommendation.destination_ids.map((id) =>
+    candidates.find((candidate) => candidate.id === id)
+  );
+  if (stops.some((stop) => !stop)) return recommendation;
+  const waypoint = (latitude: number, longitude: number) => ({
+    waypoint: { location: { latLng: { latitude, longitude } } },
+  });
+  try {
+    const response = await fetch(
+      "https://routes.googleapis.com/distanceMatrix/v2:computeRouteMatrix",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Goog-Api-Key": apiKey,
+          "X-Goog-FieldMask":
+            "originIndex,destinationIndex,status,condition,distanceMeters,duration",
+        },
+        body: JSON.stringify({
+          origins: [
+            waypoint(input.origin_latitude, input.origin_longitude),
+            ...stops.map((stop) => waypoint(stop!.latitude, stop!.longitude)),
+          ],
+          destinations: stops.map((stop) =>
+            waypoint(stop!.latitude, stop!.longitude)
+          ),
+          travelMode: "DRIVE",
+          routingPreference: "TRAFFIC_AWARE",
+        }),
+      },
+    );
+    if (!response.ok) return recommendation;
+    const elements = await response.json();
+    if (!Array.isArray(elements)) return recommendation;
+    const metres = new Map<string, number>();
+    for (const element of elements) {
+      if (
+        element.condition === "ROUTE_EXISTS" &&
+        typeof element.distanceMeters === "number"
+      ) {
+        metres.set(
+          `${element.originIndex}:${element.destinationIndex}`,
+          element.distanceMeters,
+        );
+      }
+    }
+    const permutations = [
+      [0, 1, 2],
+      [0, 2, 1],
+      [1, 0, 2],
+      [1, 2, 0],
+      [2, 0, 1],
+      [2, 1, 0],
+    ];
+    let best = permutations[0];
+    let bestMetres = Number.POSITIVE_INFINITY;
+    for (const order of permutations) {
+      const total = (metres.get(`0:${order[0]}`) ?? Infinity) +
+        (metres.get(`${order[0] + 1}:${order[1]}`) ?? Infinity) +
+        (metres.get(`${order[1] + 1}:${order[2]}`) ?? Infinity);
+      if (total < bestMetres) {
+        bestMetres = total;
+        best = order;
+      }
+    }
+    if (!Number.isFinite(bestMetres)) return recommendation;
+    return {
+      ...recommendation,
+      destination_ids: best.map((index) =>
+        recommendation.destination_ids[index]
+      ),
+      total_distance_km: Math.round(bestMetres / 10) / 100,
+    };
+  } catch {
+    return recommendation;
   }
 }
 
