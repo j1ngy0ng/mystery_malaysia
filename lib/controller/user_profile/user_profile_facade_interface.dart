@@ -8,6 +8,12 @@ abstract interface class IAuthenticationFacade implements Listenable {
   bool get obscurePassword;
   bool get isLoading;
   String? get error;
+  String? get usernameError;
+  String? get emailError;
+  String? get passwordError;
+  String? get confirmationPasswordError;
+  String? get genderError;
+  String? get dateOfBirthError;
 
   void togglePasswordVisibility();
   Future<bool> signIn(String email, String password);

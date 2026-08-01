@@ -281,15 +281,18 @@ The Edge Functions must perform these operations transactionally:
 
 1. `generate-mission`: create the request results, ordered recommendation stops
    and recommendation event.
-2. `start-mission`: create the session, participants, ordered stages, protected
-   stage mappings and the first safe clue reveal.
+2. `start-mission` with `select`: save the selected solo recommendation as a
+   `ready` session, create its participant, stages and protected mappings, and
+   preserve it as the user's current mission. Calling it later with `start`
+   changes `ready` to `active`, records `started_at` and unlocks stage one.
 3. `send-invitation`: resolve a username, email or phone number through the
    service role, reject duplicates, and insert the invitation using `invitee_id`.
 4. `request-hint`: verify active stage and unsolved destination, insert the
    single hint reveal, mark `hint_used`, and apply any XP cost.
 5. `submit-clue`: validate against `destination_clues` and update progress.
 6. `confirm-arrival`: validate GPS accuracy and geofence, insert the verified
-   visit and unlock the destination.
+   visit and unlock the destination. The foreground Active Mission tracker
+   invokes it automatically after proximity reports `reached`.
 7. `complete-stage`: award the destination stamp and unlock the next stage.
 8. `complete-mission`: finish participants/session, award badges and XP, and
    remove current-mission and temporary location rows.

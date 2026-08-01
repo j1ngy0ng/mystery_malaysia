@@ -10,6 +10,7 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../widgets/mission_card.dart';
 import '../../widgets/status_pill.dart';
+import '../../widgets/malaysia_loading.dart';
 
 class RecommendationsView extends StatefulWidget {
   const RecommendationsView({
@@ -68,8 +69,8 @@ class _RecommendationsViewState extends State<RecommendationsView> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Built around your selected vibe, RM ${widget.budgetMyr.round()} '
-            'budget and ${widget.availableHours.round()}-hour window.',
+            'Built around your RM ${widget.budgetMyr.round()} budget and '
+            '${widget.availableHours.round()}-hour travel window.',
             style: Theme.of(context).textTheme.bodyLarge,
           ),
           const SizedBox(height: 20),
@@ -160,6 +161,27 @@ class _RecommendationsViewState extends State<RecommendationsView> {
               ),
               const SizedBox(height: 24),
               Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppColors.paleMango,
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.warning_amber_rounded),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Allow at least ${mission.duration}. Traffic, queues and walking pace may extend the journey.',
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              Container(
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
                   color: AppColors.paleTeal,
@@ -188,29 +210,71 @@ class _RecommendationsViewState extends State<RecommendationsView> {
               ),
               const SizedBox(height: 24),
               Text(
-                'Your route stays secret',
+                'Destination previews',
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 8),
-              Text(
-                '${mission.stops} hidden destinations are arranged into an efficient route. You unlock each clue one stage at a time.',
+              const Text(
+                'Enough detail to compare each stop, without revealing its name or location.',
               ),
-              const SizedBox(height: 24),
-              OutlinedButton.icon(
-                onPressed: mission.id == null || isRegenerating
-                    ? null
-                    : () => _chooseStopToRegenerate(context, mission),
-                icon: const Icon(Icons.refresh_rounded),
-                label: const Text('Regenerate one mystery stop'),
-              ),
+              const SizedBox(height: 12),
+              for (var index = 0; index < mission.stops; index++) ...[
+                Container(
+                  padding: const EdgeInsets.all(15),
+                  decoration: BoxDecoration(
+                    color: index.isEven
+                        ? AppColors.paleTeal
+                        : AppColors.paleHibiscus,
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      CircleAvatar(
+                        backgroundColor: Colors.white,
+                        child: Text('${index + 1}'),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Mystery stop ${index + 1}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              index < mission.stopPreviews.length
+                                  ? mission.stopPreviews[index]
+                                  : 'A hidden Malaysian experience with its own story and discovery challenge.',
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Regenerate mystery stop ${index + 1}',
+                        onPressed: mission.id == null || isRegenerating
+                            ? null
+                            : () =>
+                                  _regenerateStop(context, mission, index + 1),
+                        icon: const Icon(Icons.refresh_rounded),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
+              ],
               const SizedBox(height: 10),
               FilledButton.icon(
                 onPressed: () async {
                   Navigator.pop(context);
-                  await _startMission(mission);
+                  await _saveMission(mission);
                 },
-                icon: const Icon(Icons.play_arrow_rounded),
-                label: const Text('Start this mission'),
+                icon: const Icon(Icons.bookmark_add_outlined),
+                label: const Text('Choose this mission'),
               ),
               const SizedBox(height: 10),
               OutlinedButton.icon(
@@ -228,27 +292,12 @@ class _RecommendationsViewState extends State<RecommendationsView> {
     );
   }
 
-  Future<void> _chooseStopToRegenerate(
+  Future<void> _regenerateStop(
     BuildContext sheetContext,
     MissionRecommendation mission,
+    int stop,
   ) async {
-    final stop = await showDialog<int>(
-      context: sheetContext,
-      builder: (context) => AlertDialog(
-        title: const Text('Replace which mystery stop?'),
-        content: const Text(
-          'Only this hidden stop will change. The other missions and stops stay the same.',
-        ),
-        actions: [
-          for (var index = 1; index <= 3; index++)
-            TextButton(
-              onPressed: () => Navigator.pop(context, index),
-              child: Text('Stop $index'),
-            ),
-        ],
-      ),
-    );
-    if (stop == null || mission.id == null) return;
+    if (mission.id == null) return;
     setState(() => isRegenerating = true);
     try {
       final updated = await facade.regenerateStop(mission.id!, stop);
@@ -270,7 +319,7 @@ class _RecommendationsViewState extends State<RecommendationsView> {
     }
   }
 
-  Future<void> _startMission(MissionRecommendation mission) async {
+  Future<void> _saveMission(MissionRecommendation mission) async {
     final recommendationId = mission.id;
     if (recommendationId == null) {
       await Navigator.pushNamed(context, '/play/demo');
@@ -280,10 +329,12 @@ class _RecommendationsViewState extends State<RecommendationsView> {
     showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator()),
+      builder: (_) => const Dialog(
+        child: MalaysiaLoading(message: 'Saving your mystery route...'),
+      ),
     );
     try {
-      final launch = await facade.startMission(recommendationId);
+      final launch = await facade.selectMission(recommendationId);
       if (!mounted) return;
       Navigator.pop(context);
       await Navigator.push(
@@ -311,7 +362,9 @@ class _RecommendationsViewState extends State<RecommendationsView> {
     showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator()),
+      builder: (_) => const Dialog(
+        child: MalaysiaLoading(message: 'Preparing the shared adventure...'),
+      ),
     );
     try {
       final sessionId = await facade.createSharedMission(mission.id!);

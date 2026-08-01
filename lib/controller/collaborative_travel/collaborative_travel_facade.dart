@@ -57,9 +57,6 @@ class CollaborativeTravelFacade extends ChangeNotifier
   @override
   Future<bool> start() => _controller.start();
   @override
-  Future<bool> submitReflection(String reflection) =>
-      _controller.submitReflection(reflection);
-  @override
   Future<MissionLaunch?> loadCurrentMission() =>
       _dataService.loadCurrentMission();
 

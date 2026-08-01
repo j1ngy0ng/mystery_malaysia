@@ -36,7 +36,8 @@ The current build implements a bright Malaysia-tourism experience across all six
 
 - authentication and profile;
 - AI mission discovery and recommendation previews;
-- active mission map, Hot & Cold guidance, pause/resume and arrival reveal;
+- saved missions with Start/Resume state, active mission map, Hot & Cold
+  guidance, automatic foreground arrival verification and destination reveal;
 - one canonical clue with one optional additional hint;
 - digital passport, stamps, achievements, reflections and AI diary;
 - direct mission invitations, lobby, readiness and group proximity.

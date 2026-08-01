@@ -22,6 +22,19 @@ class AuthenticationFacade extends ChangeNotifier
   bool get isLoading => _controller.isLoading;
   @override
   String? get error => _controller.error;
+  @override
+  String? get usernameError => _controller.usernameError;
+  @override
+  String? get emailError => _controller.emailError;
+  @override
+  String? get passwordError => _controller.passwordError;
+  @override
+  String? get confirmationPasswordError =>
+      _controller.confirmationPasswordError;
+  @override
+  String? get genderError => _controller.genderError;
+  @override
+  String? get dateOfBirthError => _controller.dateOfBirthError;
 
   @override
   void togglePasswordVisibility() => _controller.togglePasswordVisibility();

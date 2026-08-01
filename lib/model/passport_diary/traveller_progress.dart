@@ -82,6 +82,7 @@ class DiaryMemory {
     required this.emoji,
     this.id,
     this.sessionId,
+    this.isShared = false,
   });
 
   final String? id;
@@ -90,6 +91,7 @@ class DiaryMemory {
   final String date;
   final String summary;
   final String emoji;
+  final bool isShared;
 
   factory DiaryMemory.fromJson(Map<String, dynamic> json) {
     final updated = DateTime.tryParse(
@@ -104,47 +106,122 @@ class DiaryMemory {
           : '${updated.day}/${updated.month}/${updated.year}',
       summary: json['summary'] as String? ?? '',
       emoji: '✍️',
+      isShared: json['diary_type'] == 'shared',
     );
   }
 }
 
+class GroupReflection {
+  const GroupReflection({
+    required this.userId,
+    required this.name,
+    required this.isHost,
+    required this.isViewer,
+    this.reflection,
+    this.submittedAt,
+  });
+
+  final String userId;
+  final String name;
+  final bool isHost;
+  final bool isViewer;
+  final String? reflection;
+  final DateTime? submittedAt;
+
+  bool get submitted => reflection?.trim().isNotEmpty == true;
+
+  factory GroupReflection.fromJson(Map<String, dynamic> json) =>
+      GroupReflection(
+        userId: json['user_id'] as String,
+        name: json['name'] as String? ?? 'Explorer',
+        isHost: json['role'] == 'host',
+        isViewer: json['is_viewer'] == true,
+        reflection: json['reflection'] as String?,
+        submittedAt: DateTime.tryParse(json['submitted_at'] as String? ?? ''),
+      );
+}
+
+class GroupDiaryState {
+  const GroupDiaryState({
+    required this.isHost,
+    required this.allSubmitted,
+    required this.members,
+    this.diary,
+  });
+
+  final bool isHost;
+  final bool allSubmitted;
+  final List<GroupReflection> members;
+  final DiaryMemory? diary;
+
+  GroupReflection? get viewer {
+    for (final member in members) {
+      if (member.isViewer) return member;
+    }
+    return null;
+  }
+
+  factory GroupDiaryState.fromJson(Map<String, dynamic> json) {
+    final diary = json['diary'];
+    return GroupDiaryState(
+      isHost: json['is_host'] == true,
+      allSubmitted: json['all_submitted'] == true,
+      members: TravellerProgress._maps(
+        json['members'],
+      ).map(GroupReflection.fromJson).toList(),
+      diary: diary is Map
+          ? DiaryMemory.fromJson(Map<String, dynamic>.from(diary))
+          : null,
+    );
+  }
+}
+
+class EligibleDiaryMission {
+  const EligibleDiaryMission({
+    required this.sessionId,
+    required this.title,
+    required this.mode,
+    required this.completedAt,
+  });
+
+  final String sessionId;
+  final String title;
+  final String mode;
+  final DateTime? completedAt;
+
+  factory EligibleDiaryMission.fromJson(Map<String, dynamic> json) =>
+      EligibleDiaryMission(
+        sessionId: json['session_id'] as String,
+        title: json['title'] as String? ?? 'Completed mystery mission',
+        mode: json['mode'] as String? ?? 'solo',
+        completedAt: DateTime.tryParse(json['completed_at'] as String? ?? ''),
+      );
+}
+
 class TravellerProgress {
   const TravellerProgress({
-    required this.xp,
-    required this.level,
-    required this.levelStartXp,
-    required this.nextLevelXp,
     required this.completedMissions,
     required this.visitedDestinations,
     required this.exploredStates,
     required this.stamps,
     required this.achievements,
     required this.memories,
+    required this.eligibleDiaryMissions,
     required this.newBadges,
   });
 
-  final int xp;
-  final int level;
-  final int levelStartXp;
-  final int nextLevelXp;
   final int completedMissions;
   final int visitedDestinations;
   final int exploredStates;
   final List<PassportStamp> stamps;
   final List<Achievement> achievements;
   final List<DiaryMemory> memories;
+  final List<EligibleDiaryMission> eligibleDiaryMissions;
   final List<String> newBadges;
-
-  double get levelProgress =>
-      ((xp - levelStartXp) / (nextLevelXp - levelStartXp)).clamp(0, 1);
 
   factory TravellerProgress.fromJson(Map<String, dynamic> json) {
     final stats = Map<String, dynamic>.from(json['stats'] as Map? ?? {});
     return TravellerProgress(
-      xp: (json['xp'] as num?)?.round() ?? 0,
-      level: (json['level'] as num?)?.round() ?? 1,
-      levelStartXp: (json['level_start_xp'] as num?)?.round() ?? 0,
-      nextLevelXp: (json['next_level_xp'] as num?)?.round() ?? 500,
       completedMissions: (stats['completed_missions'] as num?)?.round() ?? 0,
       visitedDestinations:
           (stats['visited_destinations'] as num?)?.round() ?? 0,
@@ -152,6 +229,9 @@ class TravellerProgress {
       stamps: _maps(json['stamps']).map(PassportStamp.fromJson).toList(),
       achievements: _maps(json['badges']).map(Achievement.fromJson).toList(),
       memories: _maps(json['diaries']).map(DiaryMemory.fromJson).toList(),
+      eligibleDiaryMissions: _maps(
+        json['eligible_diary_missions'],
+      ).map(EligibleDiaryMission.fromJson).toList(),
       newBadges:
           (json['newly_unlocked_badges'] as List?)
               ?.whereType<String>()

@@ -4,10 +4,6 @@ import 'package:mystery_malaysia/model/passport_diary/traveller_progress.dart';
 void main() {
   test('shows earned and locked achievements from the passport dashboard', () {
     final progress = TravellerProgress.fromJson({
-      'xp': 100,
-      'level': 1,
-      'level_start_xp': 0,
-      'next_level_xp': 500,
       'stats': {
         'completed_missions': 0,
         'visited_destinations': 1,
@@ -29,6 +25,14 @@ void main() {
         },
       ],
       'diaries': [],
+      'eligible_diary_missions': [
+        {
+          'session_id': 'mission-1',
+          'title': 'Lantern Trail',
+          'mode': 'solo',
+          'completed_at': '2026-08-01T10:00:00Z',
+        },
+      ],
       'newly_unlocked_badges': [],
     });
 
@@ -36,6 +40,7 @@ void main() {
     expect(progress.achievements, hasLength(2));
     expect(progress.achievements.first.earned, isFalse);
     expect(progress.achievements.last.earned, isTrue);
+    expect(progress.eligibleDiaryMissions.single.title, 'Lantern Trail');
   });
 
   test('builds one mission stamp from three destination pieces', () {
@@ -66,5 +71,41 @@ void main() {
     expect(stamp.earnedPieces, 3);
     expect(stamp.complete, isTrue);
     expect(stamp.name, 'Melaka Mystery Trail');
+  });
+
+  test('parses crew reflections and a participant-visible shared diary', () {
+    final state = GroupDiaryState.fromJson({
+      'is_host': true,
+      'all_submitted': true,
+      'members': [
+        {
+          'user_id': 'host-1',
+          'name': 'Host',
+          'role': 'host',
+          'is_viewer': true,
+          'reflection': 'I enjoyed learning together at every stop.',
+        },
+        {
+          'user_id': 'member-1',
+          'name': 'Member',
+          'role': 'member',
+          'is_viewer': false,
+          'reflection': 'The shared clues made the journey memorable.',
+        },
+      ],
+      'diary': {
+        'id': 'diary-1',
+        'session_id': 'mission-1',
+        'title': 'Our Mystery Journey',
+        'summary': 'We explored Malaysia together.',
+        'diary_type': 'shared',
+      },
+    });
+
+    expect(state.isHost, isTrue);
+    expect(state.allSubmitted, isTrue);
+    expect(state.members, hasLength(2));
+    expect(state.viewer?.name, 'Host');
+    expect(state.diary?.isShared, isTrue);
   });
 }

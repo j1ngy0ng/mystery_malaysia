@@ -8,6 +8,17 @@ class SupabaseAuthService {
 
   User? get currentUser => _client.auth.currentUser;
 
+  Future<bool> isEmailRegistered(String email) async {
+    try {
+      return await _client.rpc<bool>(
+        'is_email_registered',
+        params: {'candidate': email.trim()},
+      );
+    } on PostgrestException catch (error) {
+      throw ApiError(error.message, code: error.code);
+    }
+  }
+
   Future<void> signIn({required String email, required String password}) async {
     try {
       await _client.auth.signInWithPassword(
@@ -27,6 +38,12 @@ class SupabaseAuthService {
     required DateTime dateOfBirth,
   }) async {
     try {
+      if (await isEmailRegistered(email)) {
+        throw const ApiError(
+          'An account already uses this email. Sign in instead.',
+          code: 'user_already_exists',
+        );
+      }
       final available = await _client.rpc<bool>(
         'is_username_available',
         params: {'candidate': username.trim()},
@@ -88,6 +105,12 @@ class SupabaseAuthService {
       'invalid_credentials' => 'The email or password is incorrect.',
       'email_not_confirmed' => 'Confirm your email before signing in.',
       'user_already_exists' => 'An account already uses this email.',
+      'over_email_send_rate_limit' =>
+        'Too many verification emails were requested. Please wait before trying again.',
+      'email_rate_limit_exceeded' =>
+        'Too many verification emails were requested. Please wait before trying again.',
+      'over_request_rate_limit' =>
+        'Too many attempts were made. Please wait before trying again.',
       'weak_password' => 'Use a stronger password with at least 8 characters.',
       _ => error.message,
     };

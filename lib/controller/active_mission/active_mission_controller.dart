@@ -45,8 +45,10 @@ class ActiveMissionController extends ChangeNotifier {
   String? arrivalError;
   String proximityLevel = 'unknown';
   bool isUpdatingStatus = false;
+  int? _verifiedStage;
 
   bool get canConfirmArrival =>
+      session.status == MissionStatus.active &&
       currentLocation != null &&
       (sessionId != null || session.distanceMetres <= 150);
 
@@ -71,6 +73,30 @@ class ActiveMissionController extends ChangeNotifier {
       ? '${session.distanceMetres} m from the mystery zone'
       : 'Only your current location is shown';
 
+  Future<bool> start() async {
+    if (session.status != MissionStatus.ready || sessionId == null) {
+      return false;
+    }
+    isUpdatingStatus = true;
+    arrivalError = null;
+    notifyListeners();
+    try {
+      final launch = await _dataService.startSelectedMission(sessionId!);
+      currentClue = launch.clue;
+      session = session.copyWith(
+        currentStage: launch.currentStage,
+        status: launch.status,
+      );
+      return true;
+    } on ApiError catch (error) {
+      arrivalError = error.message;
+      return false;
+    } finally {
+      isUpdatingStatus = false;
+      notifyListeners();
+    }
+  }
+
   Future<bool> togglePause() async {
     final next = session.status == MissionStatus.paused
         ? MissionStatus.active
@@ -86,7 +112,6 @@ class ActiveMissionController extends ChangeNotifier {
               next == MissionStatus.paused ? 'pause' : 'resume',
             );
       session = session.copyWith(status: status);
-      if (status == MissionStatus.active) await refreshLocation();
       return true;
     } on ApiError catch (error) {
       arrivalError = error.message;
@@ -97,7 +122,9 @@ class ActiveMissionController extends ChangeNotifier {
     }
   }
 
-  Future<void> refreshLocation() async {
+  Future<ArrivalResult?> refreshLocation() async {
+    if (session.status != MissionStatus.active) return null;
+    ArrivalResult? automaticArrival;
     isLocating = true;
     locationError = null;
     notifyListeners();
@@ -106,11 +133,16 @@ class ActiveMissionController extends ChangeNotifier {
       final location = await _locationService.getCurrentLocation();
       currentLocation = location;
       if (sessionId != null && session.status == MissionStatus.active) {
+        await _syncMission();
+        if (session.status != MissionStatus.active) return null;
         proximityLevel = await _dataService.missionProximity(
           sessionId!,
           location,
         );
-        await _syncMission();
+        if (proximityLevel == 'reached' &&
+            _verifiedStage != session.currentStage) {
+          automaticArrival = await confirmArrival();
+        }
       } else if (sessionId == null) {
         session = session.copyWith(
           distanceMetres: _locationService.distanceMetres(
@@ -127,6 +159,7 @@ class ActiveMissionController extends ChangeNotifier {
       isLocating = false;
       notifyListeners();
     }
+    return automaticArrival;
   }
 
   Future<void> _syncMission() async {
@@ -153,6 +186,7 @@ class ActiveMissionController extends ChangeNotifier {
   }
 
   Future<ArrivalResult?> confirmArrival() async {
+    if (session.status != MissionStatus.active) return null;
     final location = currentLocation;
     if (location == null) {
       arrivalError = 'Refresh your GPS location before confirming arrival.';
@@ -174,6 +208,7 @@ class ActiveMissionController extends ChangeNotifier {
         arrivalError = result.message;
         return null;
       }
+      _verifiedStage = session.currentStage;
       if (result.nextClue != null) currentClue = result.nextClue!;
       session = session.copyWith(
         currentStage: result.nextStage ?? session.currentStage,
@@ -223,7 +258,6 @@ class ActiveMissionController extends ChangeNotifier {
       completedStage: 2,
       nextStage: 3,
       totalStages: 3,
-      xpAwarded: 100,
       nextClue: MysteryClue(
         number: 3,
         text: 'Find a heritage roof where Malaysian colours gather.',

@@ -4,8 +4,6 @@ class UserProfile {
     required this.username,
     required this.email,
     required this.homeState,
-    required this.level,
-    required this.xp,
     this.gender,
     this.dateOfBirth,
     this.phoneNumber,
@@ -16,8 +14,6 @@ class UserProfile {
   final String username;
   final String email;
   final String homeState;
-  final int level;
-  final int xp;
   final String? gender;
   final DateTime? dateOfBirth;
   final String? phoneNumber;
@@ -33,8 +29,6 @@ class UserProfile {
       username: username == null || username.isEmpty ? '' : '@$username',
       email: email,
       homeState: json['hometown'] as String? ?? 'Not set',
-      level: (json['level'] as num?)?.round() ?? 1,
-      xp: (json['xp'] as num?)?.round() ?? 0,
       gender: json['gender'] as String?,
       dateOfBirth: DateTime.tryParse(json['date_of_birth'] as String? ?? ''),
       phoneNumber: json['phone_number'] as String?,
@@ -57,8 +51,6 @@ class UserProfile {
       username: username ?? this.username,
       email: email ?? this.email,
       homeState: homeState ?? this.homeState,
-      level: level,
-      xp: xp,
       gender: gender ?? this.gender,
       dateOfBirth: dateOfBirth ?? this.dateOfBirth,
       phoneNumber: phoneNumber ?? this.phoneNumber,

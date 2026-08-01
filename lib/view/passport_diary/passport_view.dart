@@ -7,6 +7,7 @@ import '../../model/passport_diary/traveller_progress.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../widgets/section_header.dart';
+import '../../widgets/malaysia_loading.dart';
 
 class PassportView extends StatefulWidget {
   const PassportView({required this.facade, super.key});
@@ -63,7 +64,9 @@ class _PassportViewState extends State<PassportView> {
           ),
           const SizedBox(height: 20),
           if (facade.isLoading)
-            const Center(child: CircularProgressIndicator())
+            const Center(
+              child: MalaysiaLoading(message: 'Opening your passport...'),
+            )
           else if (facade.error != null)
             Card(
               child: ListTile(
@@ -74,8 +77,6 @@ class _PassportViewState extends State<PassportView> {
                 ),
               ),
             ),
-          _LevelCard(facade: facade),
-          const SizedBox(height: 26),
           SectionHeader(
             title: 'Your stamps',
             action:
@@ -154,6 +155,28 @@ class _PassportViewState extends State<PassportView> {
             onAction: _openDiary,
           ),
           const SizedBox(height: 10),
+          if (facade.eligibleDiaryMissions.isNotEmpty) ...[
+            for (final mission in facade.eligibleDiaryMissions)
+              Card(
+                margin: const EdgeInsets.only(bottom: 10),
+                child: ListTile(
+                  leading: const CircleAvatar(
+                    backgroundColor: AppColors.paleMango,
+                    foregroundColor: AppColors.hibiscus,
+                    child: Icon(Icons.auto_stories_rounded),
+                  ),
+                  title: Text(mission.title),
+                  subtitle: Text(
+                    mission.mode == 'collaborative'
+                        ? 'Crew reflections needed for one shared diary'
+                        : 'Eligible for an AI travel diary',
+                  ),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => _openDiaryFor(mission.sessionId),
+                ),
+              ),
+            const SizedBox(height: 4),
+          ],
           Card(
             child: InkWell(
               borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
@@ -174,7 +197,7 @@ class _PassportViewState extends State<PassportView> {
                           ),
                           const SizedBox(height: 4),
                           const Text(
-                            'Add a reflection and relive your completed missions.',
+                            'Only eligible completed missions can become new diaries.',
                           ),
                         ],
                       ),
@@ -192,6 +215,11 @@ class _PassportViewState extends State<PassportView> {
 
   Future<void> _openDiary() async {
     await Navigator.pushNamed(context, '/diary');
+    if (mounted) await facade.load();
+  }
+
+  Future<void> _openDiaryFor(String sessionId) async {
+    await Navigator.pushNamed(context, '/diary', arguments: sessionId);
     if (mounted) await facade.load();
   }
 
@@ -222,75 +250,6 @@ class _PassportViewState extends State<PassportView> {
               ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _LevelCard extends StatelessWidget {
-  const _LevelCard({required this.facade});
-
-  final IPassportDiaryFacade facade;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppColors.purple, AppColors.straits],
-        ),
-        borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 70,
-            height: 70,
-            decoration: const BoxDecoration(
-              color: AppColors.mango,
-              shape: BoxShape.circle,
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              '${facade.level}',
-              style: TextStyle(
-                fontSize: 30,
-                fontWeight: FontWeight.w900,
-                color: AppColors.ink,
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Hidden Gem Hunter',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 19,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${facade.xp} / ${facade.nextLevelXp} XP',
-                  style: const TextStyle(color: Colors.white70),
-                ),
-                const SizedBox(height: 9),
-                LinearProgressIndicator(
-                  value: facade.levelProgress,
-                  minHeight: 8,
-                  borderRadius: BorderRadius.circular(99),
-                  color: AppColors.mango,
-                  backgroundColor: Colors.white24,
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }

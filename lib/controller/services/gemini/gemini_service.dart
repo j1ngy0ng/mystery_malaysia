@@ -12,6 +12,8 @@ class GeminiService {
     required List<String> categories,
     required int availableMinutes,
     required double budgetMyr,
+    required double maximumDistanceKm,
+    required DateTime intendedStartAt,
   }) async {
     if (_client.auth.currentUser == null) {
       throw const ApiError('Sign in before generating a mission.');
@@ -25,7 +27,8 @@ class GeminiService {
           'origin_longitude': origin.longitude,
           'available_minutes': availableMinutes,
           'budget_myr': budgetMyr,
-          'maximum_distance_km': 20,
+          'maximum_distance_km': maximumDistanceKm,
+          'intended_start_at': intendedStartAt.toUtc().toIso8601String(),
           'categories': categories,
           'group_type': 'solo',
         },

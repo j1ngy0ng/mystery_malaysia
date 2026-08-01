@@ -20,11 +20,13 @@ class MissionDiscoveryFacade extends ChangeNotifier
   final SupabaseDataService _dataService = SupabaseDataService();
 
   @override
-  String get selectedCategory => _controller.selectedCategory;
-  @override
   double get budget => _controller.budget;
   @override
   double get duration => _controller.duration;
+  @override
+  double get maximumDistance => _controller.maximumDistance;
+  @override
+  DateTime get intendedStartAt => _controller.intendedStartAt;
   @override
   bool get isGenerating => _controller.isGenerating;
   @override
@@ -40,24 +42,25 @@ class MissionDiscoveryFacade extends ChangeNotifier
   @override
   String get locationLabel => _controller.locationLabel;
   @override
-  List<String> get categories => _controller.categories;
-  @override
   List<MissionRecommendation> get recommendations =>
       _controller.recommendations;
 
   @override
-  void selectCategory(String value) => _controller.selectCategory(value);
+  void updateSchedule(DateTime value) => _controller.updateSchedule(value);
   @override
   void updateBudget(double value) => _controller.updateBudget(value);
   @override
   void updateDuration(double value) => _controller.updateDuration(value);
   @override
+  void updateMaximumDistance(double value) =>
+      _controller.updateMaximumDistance(value);
+  @override
   Future<void> detectCurrentLocation() => _controller.detectCurrentLocation();
   @override
   Future<bool> generate() => _controller.generate();
   @override
-  Future<MissionLaunch> startMission(String recommendationId) =>
-      _dataService.startMission(recommendationId);
+  Future<MissionLaunch> selectMission(String recommendationId) =>
+      _dataService.selectMission(recommendationId);
   @override
   Future<String> createSharedMission(String recommendationId) =>
       _dataService.createSharedMission(recommendationId);

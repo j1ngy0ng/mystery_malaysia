@@ -97,7 +97,7 @@ export default {
           ? session.status === "active"
           : input.action === "resume"
           ? session.status === "paused"
-          : ["active", "paused", "waiting"].includes(session.status);
+          : ["ready", "active", "paused", "waiting"].includes(session.status);
         if (!allowed) {
           return Response.json({
             message: `This mission cannot be ${input.action}d from its current state.`,
@@ -281,7 +281,10 @@ async function missionSummary(
         .select("state").eq("id", secret.destination_id).maybeSingle();
       region = destination?.state ?? region;
     }
-    if (reveal && stage.status !== "locked") {
+    if (
+      reveal &&
+      (stage.status !== "locked" || session.status === "ready")
+    ) {
       clue = {
         number: stage.stage_number,
         title: reveal.title,

@@ -173,13 +173,6 @@ export default {
         safety_score: destination.safety_score,
       };
 
-      const { data: clue, error: clueError } = await admin
-        .from("destination_clues")
-        .select("clue_xp_reward")
-        .eq("destination_id", destination.id)
-        .single();
-      if (clueError) throw clueError;
-
       const now = new Date().toISOString();
       const { error: visitError } = await admin
         .from("verified_visits")
@@ -229,26 +222,6 @@ export default {
         });
       if (userStampError) throw userStampError;
 
-      const xpReward = Number(clue.clue_xp_reward ?? 0);
-      const { data: existingXp, error: existingXpError } = await admin
-        .from("xp_ledger")
-        .select("id")
-        .eq("user_id", userId)
-        .eq("stage_id", stage.id)
-        .eq("reason", "destination_arrival")
-        .maybeSingle();
-      if (existingXpError) throw existingXpError;
-      if (!existingXp && xpReward > 0) {
-        const { error: xpError } = await admin.from("xp_ledger").insert({
-          user_id: userId,
-          session_id: sessionId,
-          stage_id: stage.id,
-          amount: xpReward,
-          reason: "destination_arrival",
-        });
-        if (xpError) throw xpError;
-      }
-
       if (session.mode === "collaborative") {
         await admin.from("mission_participants").update({
           status: "arrived",
@@ -274,7 +247,6 @@ export default {
             completed_stage: null,
             next_stage: stage.stage_number,
             total_stages: 3,
-            xp_awarded: xpReward,
             stamp_awarded: true,
             message:
               "Your arrival is verified. This shared stage advances after every joined member verifies arrival.",
@@ -388,7 +360,6 @@ export default {
         completed_stage: stage.stage_number,
         next_stage: missionCompleted ? null : stage.stage_number + 1,
         total_stages: totalStages ?? 3,
-        xp_awarded: xpReward,
         stamp_awarded: true,
         next_clue: nextClue,
         destination: revealedDestination,

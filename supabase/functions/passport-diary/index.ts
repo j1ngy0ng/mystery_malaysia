@@ -1,7 +1,13 @@
 import { withSupabase } from "npm:@supabase/server@1.4.1";
 
 type Input = {
-  action?: "dashboard" | "generate_diary" | "save_diary";
+  action?:
+    | "dashboard"
+    | "group_diary_status"
+    | "save_reflection"
+    | "generate_diary"
+    | "generate_group_diary"
+    | "save_diary";
   session_id?: string;
   reflection?: string;
   title?: string;
@@ -21,25 +27,25 @@ export default {
     try {
       if (input.action === "dashboard") {
         const [
-          { data: ledger, error: ledgerError },
           { data: stampRows, error: stampError },
           { data: visits, error: visitsError },
           { data: participants, error: participantsError },
           { data: diaries, error: diariesError },
         ] = await Promise.all([
-          admin.from("xp_ledger").select("amount").eq("user_id", userId),
           admin.from("user_stamps").select(
             "earned_at,session_id,stamp_definitions!inner(name,rarity,destinations!inner(name,state))",
           ).eq("user_id", userId).order("earned_at", { ascending: false }),
           admin.from("verified_visits").select("stage_id").eq("user_id", userId),
           admin.from("mission_participants").select(
-            "session_id,mission_sessions!inner(status,mode,completed_at)",
+            "session_id,mission_sessions!inner(title,status,mode,completed_at)",
           ).eq("user_id", userId).neq("status", "left"),
-          admin.from("diary_entries").select("id,session_id,title,content,updated_at")
+          admin.from("diary_entries").select(
+            "id,session_id,title,content,updated_at,diary_type",
+          )
             .eq("owner_user_id", userId).order("updated_at", { ascending: false }),
         ]);
-        if (ledgerError || stampError || visitsError || participantsError || diariesError) {
-          throw ledgerError ?? stampError ?? visitsError ?? participantsError ??
+        if (stampError || visitsError || participantsError || diariesError) {
+          throw stampError ?? visitsError ?? participantsError ??
             diariesError;
         }
         const completed = (participants ?? []).filter((row: any) =>
@@ -48,6 +54,24 @@ export default {
         const sharedCompleted = completed.filter((row: any) =>
           row.mission_sessions?.mode === "collaborative"
         ).length;
+        const participantSessionIds = (participants ?? []).map((row: any) =>
+          row.session_id
+        );
+        const { data: sharedDiaries, error: sharedDiaryError } =
+          participantSessionIds.length
+            ? await admin.from("diary_entries")
+              .select("id,session_id,title,content,updated_at,diary_type")
+              .eq("diary_type", "shared")
+              .in("session_id", participantSessionIds)
+              .order("updated_at", { ascending: false })
+            : { data: [], error: null };
+        if (sharedDiaryError) throw sharedDiaryError;
+        const ownDiarySessionIds = new Set(
+          (diaries ?? []).map((row: any) => row.session_id),
+        );
+        const sharedDiarySessionIds = new Set(
+          (sharedDiaries ?? []).map((row: any) => row.session_id),
+        );
         const stamps = (stampRows ?? []).map((row: any) => {
           const definition = row.stamp_definitions;
           const destination = definition.destinations;
@@ -87,16 +111,7 @@ export default {
             badge.earned_at,
           ]),
         );
-        const xp = (ledger ?? []).reduce(
-          (sum: number, row: any) => sum + Number(row.amount),
-          0,
-        );
-        const level = Math.floor(Math.max(0, xp) / 500) + 1;
         return Response.json({
-          xp,
-          level,
-          level_start_xp: (level - 1) * 500,
-          next_level_xp: level * 500,
           stats: {
             completed_missions: completed.length,
             visited_destinations: visits?.length ?? 0,
@@ -112,13 +127,26 @@ export default {
             earned: earnedBadges.has(badge.id),
             earned_at: earnedBadges.get(badge.id) ?? null,
           })),
-          diaries: (diaries ?? []).map((row: any) => ({
+          diaries: [...(sharedDiaries ?? []), ...(diaries ?? [])].map((row: any) => ({
             id: row.id,
             session_id: row.session_id,
             title: row.title,
             summary: row.content?.text ?? "",
             updated_at: row.updated_at,
+            diary_type: row.diary_type ?? "individual",
           })),
+          eligible_diary_missions: completed
+            .filter((row: any) =>
+              row.mission_sessions.mode === "collaborative"
+                ? !sharedDiarySessionIds.has(row.session_id)
+                : !ownDiarySessionIds.has(row.session_id)
+            )
+            .map((row: any) => ({
+              session_id: row.session_id,
+              title: row.mission_sessions.title,
+              mode: row.mission_sessions.mode,
+              completed_at: row.mission_sessions.completed_at,
+            })),
           newly_unlocked_badges: newBadges,
         });
       }
@@ -130,7 +158,7 @@ export default {
       }
       const { data: participant, error: participantError } = await admin
         .from("mission_participants")
-        .select("status,mission_sessions!inner(title,status,mode,completed_at)")
+        .select("role,status,mission_sessions!inner(title,status,mode,completed_at)")
         .eq("session_id", input.session_id)
         .eq("user_id", userId)
         .neq("status", "left")
@@ -142,7 +170,47 @@ export default {
         }, { status: 403 });
       }
 
+      if (input.action === "group_diary_status") {
+        if (participant.mission_sessions.mode !== "collaborative") {
+          return Response.json({ message: "A collaborative mission is required." }, {
+            status: 400,
+          });
+        }
+        return Response.json(
+          await loadGroupDiaryState(
+            admin,
+            input.session_id,
+            userId,
+            participant.role,
+          ),
+        );
+      }
+
+      if (input.action === "save_reflection") {
+        const reflection = input.reflection?.trim() ?? "";
+        if (reflection.length < 10) {
+          return Response.json({
+            message: "Please provide more details about your travel experience.",
+          }, { status: 400 });
+        }
+        const { error } = await admin.from("reflections").upsert({
+          user_id: userId,
+          session_id: input.session_id,
+          private_notes: reflection,
+        }, { onConflict: "user_id,session_id" });
+        if (error) throw error;
+        return Response.json({
+          saved: true,
+          message: "Your reflection has been submitted successfully.",
+        });
+      }
+
       if (input.action === "generate_diary") {
+        if (participant.mission_sessions.mode === "collaborative") {
+          return Response.json({
+            message: "Collaborative missions use one shared group diary.",
+          }, { status: 409 });
+        }
         const reflection = input.reflection?.trim() ?? "";
         if (reflection.length < 10) {
           return Response.json({
@@ -192,6 +260,11 @@ export default {
       }
 
       if (input.action === "save_diary") {
+        if (participant.mission_sessions.mode === "collaborative") {
+          return Response.json({
+            message: "Collaborative missions use one shared group diary.",
+          }, { status: 409 });
+        }
         const title = input.title?.trim() ?? "";
         const content = input.content?.trim() ?? "";
         if (title.length === 0 || content.length === 0) {
@@ -220,6 +293,89 @@ export default {
         return Response.json({
           saved: true,
           message: "Your travel diary has been saved successfully.",
+        });
+      }
+
+      if (input.action === "generate_group_diary") {
+        if (
+          participant.mission_sessions.mode !== "collaborative" ||
+          participant.role !== "host"
+        ) {
+          return Response.json({
+            message: "Only the host can generate the shared group diary.",
+          }, { status: 403 });
+        }
+        const state = await loadGroupDiaryState(
+          admin,
+          input.session_id,
+          userId,
+          participant.role,
+        );
+        if (state.diary) return Response.json({ diary: state.diary });
+        if (!state.all_submitted) {
+          return Response.json({
+            message: "Every current member must submit a reflection first.",
+          }, { status: 409 });
+        }
+        const journey = await verifiedJourney(admin, userId, input.session_id);
+        if (journey.destinations.length === 0) {
+          return Response.json({
+            message: "This mission has no verified destination visits.",
+          }, { status: 409 });
+        }
+        const combinedReflection = state.members.map((member: any) =>
+          `${member.name}: ${member.reflection}`
+        ).join("\n\n");
+        const title = `Our ${participant.mission_sessions.title} Journey`;
+        const generated = await generateDiary({
+          missionTitle: participant.mission_sessions.title,
+          completedAt: participant.mission_sessions.completed_at,
+          destinations: journey.destinations,
+          reflection: combinedReflection,
+          group: true,
+        });
+        const content = generated ?? verifiedDraft(
+          journey.destinations,
+          combinedReflection,
+          true,
+        );
+        const { data: saved, error: saveError } = await admin
+          .from("diary_entries")
+          .insert({
+            session_id: input.session_id,
+            owner_user_id: null,
+            diary_type: "shared",
+            title,
+            content: { text: content },
+            visibility: "participants",
+            ai_model: Deno.env.get("GEMINI_MODEL") ?? "gemini-2.5-flash",
+            prompt_version: "verified-group-diary-v1",
+          })
+          .select("id,session_id,title,content,updated_at")
+          .single();
+        if (saveError) throw saveError;
+        await admin.from("notifications").insert(
+          state.members.map((member: any) => ({
+            user_id: member.user_id,
+            notification_type: "group_diary_ready",
+            title: "Your shared travel diary is ready",
+            body: `${title} is ready to read and share.`,
+            data: { session_id: input.session_id, diary_id: saved.id },
+          })),
+        );
+        return Response.json({
+          diary: {
+            id: saved.id,
+            session_id: saved.session_id,
+            title: saved.title,
+            summary: saved.content?.text ?? "",
+            updated_at: saved.updated_at,
+            diary_type: "shared",
+          },
+          generated: Boolean(generated),
+          message: generated
+            ? "The shared AI travel diary is ready for every member."
+            : "Gemini was unavailable, so a verified shared draft was created for every member.",
         });
       }
 
@@ -252,11 +408,82 @@ async function verifiedJourney(admin: any, userId: string, sessionId: string) {
   return { destinations: destinations ?? [] };
 }
 
+async function loadGroupDiaryState(
+  admin: any,
+  sessionId: string,
+  viewerId: string,
+  viewerRole: string,
+) {
+  const [
+    { data: members, error: memberError },
+    { data: reflections, error: reflectionError },
+    { data: diary, error: diaryError },
+  ] = await Promise.all([
+    admin.from("mission_participants").select("user_id,role,status")
+      .eq("session_id", sessionId).neq("status", "left"),
+    admin.from("reflections").select("user_id,private_notes,updated_at")
+      .eq("session_id", sessionId),
+    admin.from("diary_entries")
+      .select("id,session_id,title,content,updated_at")
+      .eq("session_id", sessionId).eq("diary_type", "shared")
+      .maybeSingle(),
+  ]);
+  if (memberError || reflectionError || diaryError) {
+    throw memberError ?? reflectionError ?? diaryError;
+  }
+  const memberIds = (members ?? []).map((member: any) => member.user_id);
+  const { data: profiles, error: profileError } = memberIds.length
+    ? await admin.from("profiles").select("id,display_name,username")
+      .in("id", memberIds)
+    : { data: [], error: null };
+  if (profileError) throw profileError;
+  const profileById = new Map(
+    (profiles ?? []).map((profile: any) => [profile.id, profile]),
+  );
+  const reflectionByUser = new Map(
+    (reflections ?? []).map((reflection: any) => [
+      reflection.user_id,
+      reflection,
+    ]),
+  );
+  const groupMembers = (members ?? []).map((member: any) => {
+    const reflection = reflectionByUser.get(member.user_id);
+    const profile = profileById.get(member.user_id);
+    return {
+      user_id: member.user_id,
+      name: profile?.display_name ?? profile?.username ?? "Explorer",
+      role: member.role,
+      is_viewer: member.user_id === viewerId,
+      reflection: reflection?.private_notes ?? null,
+      submitted_at: reflection?.updated_at ?? null,
+    };
+  });
+  return {
+    is_host: viewerRole === "host",
+    all_submitted: groupMembers.length > 0 &&
+      groupMembers.every((member: any) =>
+        typeof member.reflection === "string" && member.reflection.trim()
+      ),
+    members: groupMembers,
+    diary: diary
+      ? {
+        id: diary.id,
+        session_id: diary.session_id,
+        title: diary.title,
+        summary: diary.content?.text ?? "",
+        updated_at: diary.updated_at,
+        diary_type: "shared",
+      }
+      : null,
+  };
+}
+
 async function generateDiary(input: {
   missionTitle: string;
   completedAt: string;
   destinations: any[];
   reflection: string;
+  group?: boolean;
 }): Promise<string | null> {
   const key = Deno.env.get("GEMINI_API_KEY")?.trim();
   if (!key) return null;
@@ -270,7 +497,9 @@ async function generateDiary(input: {
     Boolean(model) && values.indexOf(model) === index
   );
   const prompt = [
-    "Write a warm first-person travel diary of 180-280 words.",
+    input.group
+      ? "Write a warm first-person plural group travel diary of 180-280 words using we/our."
+      : "Write a warm first-person travel diary of 180-280 words.",
     "Use only the verified journey data and traveller reflection below.",
     "Do not add destinations, activities, people, facts or events not present in the input.",
     "Return only the diary prose.",
@@ -314,7 +543,11 @@ async function generateDiary(input: {
   return null;
 }
 
-function verifiedDraft(destinations: any[], reflection: string): string {
+function verifiedDraft(
+  destinations: any[],
+  reflection: string,
+  group = false,
+): string {
   const stops = destinations.map((destination, index) => {
     const facts = Array.isArray(destination.facts)
       ? destination.facts.filter((fact: unknown) => typeof fact === "string")
@@ -332,7 +565,9 @@ function verifiedDraft(destinations: any[], reflection: string): string {
   return [
     reflection.trim(),
     "",
-    "My verified Mystery Malaysia journey:",
+    group
+      ? "Our verified Mystery Malaysia journey:"
+      : "My verified Mystery Malaysia journey:",
     ...stops,
   ].join("\n");
 }

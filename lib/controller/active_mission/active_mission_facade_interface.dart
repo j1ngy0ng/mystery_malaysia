@@ -20,7 +20,8 @@ abstract interface class IActiveMissionFacade implements Listenable {
   String get temperature;
   String get mapStatus;
 
-  Future<void> refreshLocation();
+  Future<ArrivalResult?> refreshLocation();
+  Future<bool> start();
   Future<ArrivalResult?> confirmArrival();
   Future<bool> togglePause();
   Future<bool> abandon();

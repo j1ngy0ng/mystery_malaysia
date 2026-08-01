@@ -269,12 +269,12 @@ export default {
       if (input.action === "remove") {
         if (
           participant.role !== "host" ||
-          session.status !== "waiting" ||
+          !["waiting", "active", "paused"].includes(session.status) ||
           !input.member_id ||
           input.member_id === userId
         ) {
           return Response.json({
-            message: "Only the host can remove another member before the mission starts.",
+            message: "Only the host can remove another member from a current mission.",
           }, { status: 403 });
         }
         await admin.from("mission_participants").update({

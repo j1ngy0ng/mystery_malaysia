@@ -15,6 +15,8 @@ class PassportDiaryFacade extends ChangeNotifier
   @override
   TravellerProgress? get progress => _controller.progress;
   @override
+  GroupDiaryState? get groupDiaryState => _controller.groupDiaryState;
+  @override
   List<PassportStamp> get stamps => _controller.stamps;
   @override
   List<MissionStamp> get missionStamps => _controller.missionStamps;
@@ -23,13 +25,8 @@ class PassportDiaryFacade extends ChangeNotifier
   @override
   List<DiaryMemory> get memories => _controller.memories;
   @override
-  int get xp => _controller.xp;
-  @override
-  int get level => _controller.level;
-  @override
-  int get nextLevelXp => _controller.nextLevelXp;
-  @override
-  double get levelProgress => _controller.levelProgress;
+  List<EligibleDiaryMission> get eligibleDiaryMissions =>
+      _controller.eligibleDiaryMissions;
   @override
   bool get isLoading => _controller.isLoading;
   @override
@@ -37,6 +34,15 @@ class PassportDiaryFacade extends ChangeNotifier
 
   @override
   Future<void> load() => _controller.load();
+  @override
+  Future<bool> submitReflection(String sessionId, String reflection) =>
+      _controller.submitReflection(sessionId, reflection);
+  @override
+  Future<void> loadGroupDiary(String sessionId) =>
+      _controller.loadGroupDiary(sessionId);
+  @override
+  Future<String?> generateGroupDiary(String sessionId) =>
+      _controller.generateGroupDiary(sessionId);
   @override
   Future<({bool generated, String title, String content, String message})?>
   generateDiary(String sessionId, String reflection) =>

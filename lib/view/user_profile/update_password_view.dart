@@ -41,13 +41,19 @@ class _UpdatePasswordViewState extends State<UpdatePasswordView> {
           TextField(
             controller: password,
             obscureText: true,
-            decoration: const InputDecoration(labelText: 'New password'),
+            decoration: InputDecoration(
+              labelText: 'New password',
+              errorText: facade.passwordError,
+            ),
           ),
           const SizedBox(height: 14),
           TextField(
             controller: confirmation,
             obscureText: true,
-            decoration: const InputDecoration(labelText: 'Confirm password'),
+            decoration: InputDecoration(
+              labelText: 'Confirm password',
+              errorText: facade.confirmationPasswordError,
+            ),
           ),
           if (facade.error != null) ...[
             const SizedBox(height: 12),

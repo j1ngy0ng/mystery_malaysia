@@ -20,13 +20,13 @@ class MissionHistoryController extends ChangeNotifier {
       ? missions
       : missions
             .where(
-              (mission) =>
-                  mission.status.name ==
-                  (filter == MissionHistoryFilter.active
-                      ? MissionStatus.active.name
-                      : filter == MissionHistoryFilter.paused
-                      ? MissionStatus.paused.name
-                      : MissionStatus.completed.name),
+              (mission) => filter == MissionHistoryFilter.active
+                  ? mission.status == MissionStatus.ready ||
+                        mission.status == MissionStatus.active
+                  : mission.status.name ==
+                        (filter == MissionHistoryFilter.paused
+                            ? MissionStatus.paused.name
+                            : MissionStatus.completed.name),
             )
             .toList(growable: false);
 

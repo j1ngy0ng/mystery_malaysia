@@ -7,6 +7,7 @@ import '../../model/active_mission/mission_session.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../widgets/status_pill.dart';
+import '../../widgets/malaysia_loading.dart';
 import 'active_mission_view.dart';
 import '../collaborative_travel/shared_mission_view.dart';
 
@@ -83,7 +84,9 @@ class _MissionHistoryViewState extends State<MissionHistoryView> {
               ),
               const SizedBox(height: 18),
               if (facade.isLoading)
-                const Center(child: CircularProgressIndicator())
+                const Center(
+                  child: MalaysiaLoading(message: 'Tracing your journeys...'),
+                )
               else if (facade.error != null)
                 _HistoryMessage(
                   message: facade.error!,
@@ -116,7 +119,8 @@ class _MissionHistoryViewState extends State<MissionHistoryView> {
                             ),
                           ),
                         ).then((_) => facade.load());
-                      } else if (mission.status == MissionStatus.active ||
+                      } else if (mission.status == MissionStatus.ready ||
+                          mission.status == MissionStatus.active ||
                           mission.status == MissionStatus.paused) {
                         final launch = mission.launch;
                         if (launch != null) {
@@ -132,10 +136,12 @@ class _MissionHistoryViewState extends State<MissionHistoryView> {
                           ).then((_) => facade.load());
                         }
                       } else {
-                        Navigator.pushNamed(
-                          context,
-                          '/diary',
-                          arguments: mission.sessionId,
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Generate travel diaries from your Digital Passport.',
+                            ),
+                          ),
                         );
                       }
                     },
@@ -185,6 +191,11 @@ class _MissionHistoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (label, color, icon) = switch (mission.status) {
+      MissionStatus.ready => (
+        'Ready to start',
+        AppColors.mango,
+        Icons.flag_circle_outlined,
+      ),
       MissionStatus.waiting => (
         'Waiting',
         AppColors.mango,

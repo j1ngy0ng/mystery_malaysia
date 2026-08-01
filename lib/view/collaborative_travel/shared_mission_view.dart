@@ -9,6 +9,7 @@ import '../active_mission/active_mission_view.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../widgets/status_pill.dart';
+import '../../widgets/malaysia_loading.dart';
 
 class SharedMissionView extends StatefulWidget {
   const SharedMissionView({required this.facade, super.key});
@@ -22,7 +23,6 @@ class SharedMissionView extends StatefulWidget {
 class _SharedMissionViewState extends State<SharedMissionView> {
   late final ICollaborativeTravelFacade facade;
   final invite = TextEditingController();
-  final reflection = TextEditingController();
   Timer? refreshTimer;
 
   @override
@@ -42,7 +42,6 @@ class _SharedMissionViewState extends State<SharedMissionView> {
     refreshTimer?.cancel();
     facade.dispose();
     invite.dispose();
-    reflection.dispose();
     super.dispose();
   }
 
@@ -129,14 +128,20 @@ class _SharedMissionViewState extends State<SharedMissionView> {
               ),
               const SizedBox(height: 8),
               if (facade.isLoading && facade.participants.isEmpty)
-                const Center(child: CircularProgressIndicator())
+                const Center(
+                  child: MalaysiaLoading(message: 'Gathering your crew...'),
+                )
               else
                 ...facade.participants.map(
                   (participant) => _ParticipantTile(
                     participant: participant,
                     canRemove:
                         facade.isHost &&
-                        facade.status == 'waiting' &&
+                        const [
+                          'waiting',
+                          'active',
+                          'paused',
+                        ].contains(facade.status) &&
                         !participant.isHost,
                     onRemove: () => _confirmRemove(participant),
                   ),
@@ -196,24 +201,6 @@ class _SharedMissionViewState extends State<SharedMissionView> {
                   ],
                 ),
               ),
-              if (facade.status == 'completed') ...[
-                const SizedBox(height: 22),
-                TextField(
-                  controller: reflection,
-                  minLines: 3,
-                  maxLines: 6,
-                  decoration: const InputDecoration(
-                    labelText: 'Your group-mission reflection',
-                  ),
-                ),
-                const SizedBox(height: 10),
-                FilledButton(
-                  onPressed: facade.isLoading
-                      ? null
-                      : () => facade.submitReflection(reflection.text),
-                  child: const Text('Submit reflection'),
-                ),
-              ],
             ],
           ),
         );

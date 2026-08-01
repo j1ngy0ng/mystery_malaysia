@@ -191,7 +191,6 @@ class ArrivalResult {
     this.completedStage,
     this.nextStage,
     this.totalStages,
-    this.xpAwarded = 0,
     this.nextClue,
   });
 
@@ -203,7 +202,6 @@ class ArrivalResult {
   final int? completedStage;
   final int? nextStage;
   final int? totalStages;
-  final int xpAwarded;
   final MysteryClue? nextClue;
 
   factory ArrivalResult.fromJson(Map<String, dynamic> json) {
@@ -220,7 +218,6 @@ class ArrivalResult {
       completedStage: (json['completed_stage'] as num?)?.round(),
       nextStage: (json['next_stage'] as num?)?.round(),
       totalStages: (json['total_stages'] as num?)?.round(),
-      xpAwarded: (json['xp_awarded'] as num?)?.round() ?? 0,
       nextClue: clue is Map
           ? MysteryClue(
               number: (clue['number'] as num).round(),

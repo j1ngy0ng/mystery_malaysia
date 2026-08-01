@@ -45,7 +45,9 @@ class ActiveMissionFacade extends ChangeNotifier
   String get mapStatus => _controller.mapStatus;
 
   @override
-  Future<void> refreshLocation() => _controller.refreshLocation();
+  Future<ArrivalResult?> refreshLocation() => _controller.refreshLocation();
+  @override
+  Future<bool> start() => _controller.start();
   @override
   Future<ArrivalResult?> confirmArrival() => _controller.confirmArrival();
   @override

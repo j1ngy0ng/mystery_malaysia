@@ -10,6 +10,8 @@ class MissionRecommendation {
     required this.stops,
     required this.colorValue,
     required this.iconKey,
+    this.durationMinutes = 0,
+    this.stopPreviews = const [],
   });
 
   final String? id;
@@ -22,6 +24,8 @@ class MissionRecommendation {
   final int stops;
   final int colorValue;
   final String iconKey;
+  final int durationMinutes;
+  final List<String> stopPreviews;
 
   factory MissionRecommendation.fromJson(Map<String, dynamic> json) {
     final durationMinutes =
@@ -55,6 +59,14 @@ class MissionRecommendation {
         3 => 'food',
         _ => 'lantern',
       },
+      durationMinutes: durationMinutes,
+      stopPreviews:
+          (json['stop_previews'] as List?)?.whereType<String>().toList() ??
+          List.generate(
+            (json['stops'] as num?)?.round() ?? 1,
+            (index) =>
+                'A hidden Malaysian experience with its own atmosphere, story and discovery challenge.',
+          ),
     );
   }
 }

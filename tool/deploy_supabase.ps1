@@ -41,9 +41,19 @@ try {
         throw 'Could not apply the database migrations.'
     }
 
-    & npx.cmd --yes supabase@latest functions deploy generate-mission --output-format text --agent no
-    if ($LASTEXITCODE -ne 0) {
-        throw 'Could not deploy the generate-mission Edge Function.'
+    foreach ($functionName in @(
+        'generate-mission',
+        'regenerate-stop',
+        'start-mission',
+        'mission-control',
+        'confirm-arrival',
+        'passport-diary',
+        'shared-mission'
+    )) {
+        & npx.cmd --yes supabase@latest functions deploy $functionName --output-format text --agent no
+        if ($LASTEXITCODE -ne 0) {
+            throw "Could not deploy the $functionName Edge Function."
+        }
     }
 }
 finally {

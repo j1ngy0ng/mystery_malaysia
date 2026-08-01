@@ -24,7 +24,6 @@ abstract interface class ICollaborativeTravelFacade implements Listenable {
   Future<bool> remove(String memberId);
   Future<bool> toggleReady();
   Future<bool> start();
-  Future<bool> submitReflection(String reflection);
   Future<MissionLaunch?> loadCurrentMission();
   void dispose();
 }

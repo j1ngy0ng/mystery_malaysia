@@ -144,7 +144,7 @@ export default {
           : row.destination_id
       );
       const { data: route } = await admin.from("destinations")
-        .select("categories,estimated_budget_myr,estimated_duration_minutes")
+        .select("id,categories,estimated_budget_myr,estimated_duration_minutes")
         .in("id", allIds);
       const duration = (route ?? []).reduce(
         (total, row) => total + Number(row.estimated_duration_minutes ?? 60),
@@ -196,6 +196,19 @@ export default {
           difficulty: saved.difficulty,
           recommendation_rank: saved.recommendation_rank,
           stops: 3,
+          stop_previews: allIds.map((id) => {
+            const destination = (route ?? []).find((row: any) => row.id === id);
+            const themes = (destination?.categories ?? []).slice(0, 2)
+              .map((category: string) => category.toLowerCase());
+            const focus = themes.length
+              ? themes.join(" and ")
+              : "a local hidden gem";
+            const minutes = Math.max(
+              30,
+              Number(destination?.estimated_duration_minutes ?? 60),
+            );
+            return `Expect ${focus} in a roughly ${minutes}-minute mystery stop. The exact place remains hidden until arrival.`;
+          }),
         },
       });
     } catch (error) {

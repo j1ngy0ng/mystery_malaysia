@@ -21,8 +21,6 @@ class UserProfileController extends ChangeNotifier {
     username: '',
     email: '',
     homeState: 'Not set',
-    level: 1,
-    xp: 0,
   );
 
   bool editing = false;

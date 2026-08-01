@@ -56,9 +56,10 @@ class _SignInViewState extends State<SignInView> {
                   TextField(
                     controller: email,
                     keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Email',
-                      prefixIcon: Icon(Icons.mail_outline_rounded),
+                      prefixIcon: const Icon(Icons.mail_outline_rounded),
+                      errorText: facade.emailError,
                     ),
                   ),
                   const SizedBox(height: 14),
@@ -76,6 +77,7 @@ class _SignInViewState extends State<SignInView> {
                               : Icons.visibility_off_outlined,
                         ),
                       ),
+                      errorText: facade.passwordError,
                     ),
                   ),
                   Align(

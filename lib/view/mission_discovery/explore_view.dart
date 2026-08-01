@@ -1,141 +1,152 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
-import '../../widgets/section_header.dart';
-import '../../widgets/status_pill.dart';
 
-class ExploreView extends StatelessWidget {
+class ExploreView extends StatefulWidget {
   const ExploreView({super.key});
+
+  @override
+  State<ExploreView> createState() => _ExploreViewState();
+}
+
+class _ExploreViewState extends State<ExploreView>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController animation = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1800),
+  )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    animation.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 110),
+      padding: const EdgeInsets.fromLTRB(24, 36, 24, 120),
       children: [
         Text(
-          'Explore Malaysia',
+          'Begin your enigmatic odyssey',
+          textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.headlineLarge,
         ),
-        const SizedBox(height: 5),
+        const SizedBox(height: 10),
         Text(
-          'Choose a vibe. The exact destination stays hidden.',
+          'A secret three-stop Malaysian adventure is waiting inside.',
+          textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.bodyLarge,
         ),
-        const SizedBox(height: 20),
-        TextField(
-          readOnly: true,
-          onTap: () => Navigator.pushNamed(context, '/missions/request'),
-          decoration: const InputDecoration(
-            hintText: 'Search a vibe, state or adventure',
-            prefixIcon: Icon(Icons.search_rounded),
-            suffixIcon: Icon(Icons.tune_rounded),
-          ),
-        ),
-        const SizedBox(height: 24),
-        const SectionHeader(title: 'Pick your adventure'),
-        const SizedBox(height: 10),
-        _ExploreCard(
-          title: 'Taste the neighbourhood',
-          subtitle: 'Markets, kopitiams and family recipes',
-          emoji: '🍜',
-          color: AppColors.paleMango,
-          accent: AppColors.hibiscus,
-          onTap: () => Navigator.pushNamed(context, '/missions/request'),
-        ),
-        const SizedBox(height: 12),
-        _ExploreCard(
-          title: 'Stories in the streets',
-          subtitle: 'Architecture, heritage and local legends',
-          emoji: '🏮',
-          color: AppColors.paleHibiscus,
-          accent: AppColors.purple,
-          onTap: () => Navigator.pushNamed(context, '/missions/request'),
-        ),
-        const SizedBox(height: 12),
-        _ExploreCard(
-          title: 'Into the green',
-          subtitle: 'Waterfalls, rainforests and cool viewpoints',
-          emoji: '🌿',
-          color: AppColors.paleTeal,
-          accent: AppColors.teal,
-          onTap: () => Navigator.pushNamed(context, '/missions/request'),
-        ),
-        const SizedBox(height: 28),
-        const SectionHeader(title: 'Trending states'),
-        const SizedBox(height: 10),
-        const Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            StatusPill(label: 'Penang • Food', icon: Icons.trending_up_rounded),
-            StatusPill(
-              label: 'Sabah • Nature',
-              icon: Icons.trending_up_rounded,
-              color: AppColors.green,
-            ),
-            StatusPill(
-              label: 'Melaka • Heritage',
-              icon: Icons.trending_up_rounded,
-              color: AppColors.hibiscus,
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _ExploreCard extends StatelessWidget {
-  const _ExploreCard({
-    required this.title,
-    required this.subtitle,
-    required this.emoji,
-    required this.color,
-    required this.accent,
-    required this.onTap,
-  });
-
-  final String title;
-  final String subtitle;
-  final String emoji;
-  final Color color;
-  final Color accent;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: color,
-      borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(18),
-          child: Row(
-            children: [
-              Text(emoji, style: const TextStyle(fontSize: 46)),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+        const SizedBox(height: 44),
+        Semantics(
+          button: true,
+          label: 'Open the mystery box and build a mission',
+          child: GestureDetector(
+            onTap: () => Navigator.pushNamed(context, '/missions/request'),
+            child: AnimatedBuilder(
+              animation: animation,
+              builder: (context, child) {
+                final value = Curves.easeInOut.transform(animation.value);
+                return Transform.rotate(
+                  angle: math.sin(value * math.pi * 2) * .025,
+                  child: Transform.scale(
+                    scale: .97 + value * .05,
+                    child: child,
+                  ),
+                );
+              },
+              child: Container(
+                height: 310,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [AppColors.purple, AppColors.straits],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.purple.withValues(alpha: .28),
+                      blurRadius: 30,
+                      spreadRadius: 5,
+                    ),
+                  ],
+                ),
+                child: Stack(
+                  alignment: Alignment.center,
                   children: [
-                    Text(title, style: Theme.of(context).textTheme.titleMedium),
-                    const SizedBox(height: 4),
-                    Text(subtitle),
+                    for (final alignment in const [
+                      Alignment(-.72, -.7),
+                      Alignment(.72, -.62),
+                      Alignment(-.62, .72),
+                      Alignment(.65, .7),
+                    ])
+                      Align(
+                        alignment: alignment,
+                        child: const Icon(
+                          Icons.auto_awesome_rounded,
+                          color: AppColors.mango,
+                          size: 27,
+                        ),
+                      ),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 150,
+                          height: 150,
+                          decoration: BoxDecoration(
+                            color: AppColors.mango,
+                            borderRadius: BorderRadius.circular(34),
+                            border: Border.all(color: Colors.white, width: 4),
+                          ),
+                          child: const Icon(
+                            Icons.inventory_2_rounded,
+                            size: 86,
+                            color: AppColors.ink,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        const Text(
+                          'Tap to open the mystery',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 19,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
-              CircleAvatar(
-                backgroundColor: accent,
-                foregroundColor: Colors.white,
-                child: const Icon(Icons.arrow_forward_rounded),
+            ),
+          ),
+        ),
+        const SizedBox(height: 30),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.paleTeal,
+            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+          ),
+          child: const Row(
+            children: [
+              Icon(Icons.location_searching_rounded, color: AppColors.teal),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Your current location helps uncover safe, less-crowded places nearby without revealing them early.',
+                ),
               ),
             ],
           ),
         ),
-      ),
+      ],
     );
   }
 }

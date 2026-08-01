@@ -5,9 +5,10 @@ import '../../model/active_mission/mission_session.dart';
 import '../../model/mission_discovery/mission_recommendation.dart';
 
 abstract interface class IMissionDiscoveryFacade implements Listenable {
-  String get selectedCategory;
   double get budget;
   double get duration;
+  double get maximumDistance;
+  DateTime get intendedStartAt;
   bool get isGenerating;
   bool get isLocating;
   AppLocation? get currentLocation;
@@ -15,15 +16,15 @@ abstract interface class IMissionDiscoveryFacade implements Listenable {
   String? get generationError;
   bool get hasLocation;
   String get locationLabel;
-  List<String> get categories;
   List<MissionRecommendation> get recommendations;
 
-  void selectCategory(String value);
+  void updateSchedule(DateTime value);
   void updateBudget(double value);
   void updateDuration(double value);
+  void updateMaximumDistance(double value);
   Future<void> detectCurrentLocation();
   Future<bool> generate();
-  Future<MissionLaunch> startMission(String recommendationId);
+  Future<MissionLaunch> selectMission(String recommendationId);
   Future<String> createSharedMission(String recommendationId);
   Future<MissionRecommendation> regenerateStop(
     String recommendationId,

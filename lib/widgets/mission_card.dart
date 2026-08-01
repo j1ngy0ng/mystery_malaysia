@@ -74,8 +74,37 @@ class MissionCard extends StatelessWidget {
                           icon: Icons.flag_outlined,
                           color: AppColors.purple,
                         ),
+                        StatusPill(
+                          label: mission.difficulty,
+                          icon: Icons.signal_cellular_alt_rounded,
+                          color: AppColors.hibiscus,
+                        ),
                       ],
                     ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Time note: allow at least ${mission.duration}; delays may extend it.',
+                      style: const TextStyle(
+                        color: AppColors.hibiscus,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    for (
+                      var index = 0;
+                      index < mission.stopPreviews.length;
+                      index++
+                    )
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 3),
+                        child: Text(
+                          'Stop ${index + 1}: ${mission.stopPreviews[index]}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ),
                   ],
                 ),
               ),

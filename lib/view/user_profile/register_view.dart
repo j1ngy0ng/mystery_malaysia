@@ -67,9 +67,10 @@ class _RegisterViewState extends State<RegisterView> {
               TextField(
                 controller: username,
                 textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Username',
-                  prefixIcon: Icon(Icons.alternate_email_rounded),
+                  prefixIcon: const Icon(Icons.alternate_email_rounded),
+                  errorText: facade.usernameError,
                 ),
               ),
               const SizedBox(height: 14),
@@ -77,17 +78,19 @@ class _RegisterViewState extends State<RegisterView> {
                 controller: email,
                 keyboardType: TextInputType.emailAddress,
                 textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Email',
-                  prefixIcon: Icon(Icons.mail_outline_rounded),
+                  prefixIcon: const Icon(Icons.mail_outline_rounded),
+                  errorText: facade.emailError,
                 ),
               ),
               const SizedBox(height: 14),
               DropdownButtonFormField<String>(
                 initialValue: gender.isEmpty ? null : gender,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Gender',
-                  prefixIcon: Icon(Icons.badge_outlined),
+                  prefixIcon: const Icon(Icons.badge_outlined),
+                  errorText: facade.genderError,
                 ),
                 items: const [
                   DropdownMenuItem(value: 'female', child: Text('Female')),
@@ -108,9 +111,10 @@ class _RegisterViewState extends State<RegisterView> {
                 borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                 onTap: _pickDateOfBirth,
                 child: InputDecorator(
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Date of birth',
-                    prefixIcon: Icon(Icons.cake_outlined),
+                    prefixIcon: const Icon(Icons.cake_outlined),
+                    errorText: facade.dateOfBirthError,
                   ),
                   child: Text(
                     dateOfBirth == null
@@ -135,6 +139,7 @@ class _RegisterViewState extends State<RegisterView> {
                           : Icons.visibility_off_outlined,
                     ),
                   ),
+                  errorText: facade.passwordError,
                 ),
               ),
               const SizedBox(height: 14),
@@ -142,9 +147,10 @@ class _RegisterViewState extends State<RegisterView> {
                 controller: confirmationPassword,
                 obscureText: facade.obscurePassword,
                 onSubmitted: (_) => _register(),
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Confirm password',
-                  prefixIcon: Icon(Icons.lock_reset_rounded),
+                  prefixIcon: const Icon(Icons.lock_reset_rounded),
+                  errorText: facade.confirmationPasswordError,
                 ),
               ),
               const SizedBox(height: 8),
@@ -206,11 +212,28 @@ class _RegisterViewState extends State<RegisterView> {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Account created. Confirm your email, then sign in.'),
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        icon: const Icon(
+          Icons.mark_email_read_rounded,
+          color: AppColors.teal,
+          size: 42,
+        ),
+        title: const Text('Registration successful'),
+        content: const Text(
+          'Click the verification link sent to your email, then return to sign in.',
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Go to sign in'),
+          ),
+        ],
       ),
     );
+    if (!mounted) return;
     Navigator.pushReplacementNamed(context, '/auth/sign-in');
   }
 

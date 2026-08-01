@@ -6,6 +6,7 @@ import 'recommendations_view.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../widgets/status_pill.dart';
+import '../../widgets/malaysia_loading.dart';
 
 class MissionBuilderView extends StatefulWidget {
   const MissionBuilderView({required this.facade, super.key});
@@ -49,19 +50,23 @@ class _MissionBuilderViewState extends State<MissionBuilderView> {
                 ),
                 child: Row(
                   children: [
-                    const Text('🧭', style: TextStyle(fontSize: 46)),
+                    const Icon(
+                      Icons.event_available_rounded,
+                      size: 46,
+                      color: AppColors.teal,
+                    ),
                     const SizedBox(width: 14),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Set the vibe, not the place',
+                            'Set your journey window',
                             style: Theme.of(context).textTheme.titleLarge,
                           ),
                           const SizedBox(height: 4),
                           const Text(
-                            'We keep every destination secret until you arrive.',
+                            'Choose only when, how far and how much. Your destinations stay secret.',
                           ),
                         ],
                       ),
@@ -70,26 +75,30 @@ class _MissionBuilderViewState extends State<MissionBuilderView> {
                 ),
               ),
               const SizedBox(height: 26),
-              _FieldLabel(
-                title: 'What sounds fun?',
-                value: facade.selectedCategory,
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 9,
-                runSpacing: 9,
-                children: facade.categories.map((category) {
-                  final selected = facade.selectedCategory == category;
-                  return ChoiceChip(
-                    label: Text(category),
-                    selected: selected,
-                    onSelected: (_) => facade.selectCategory(category),
-                    selectedColor: AppColors.paleHibiscus,
-                    side: BorderSide(
-                      color: selected ? AppColors.hibiscus : AppColors.outline,
+              Row(
+                children: [
+                  Expanded(
+                    child: _ConstraintPicker(
+                      label: 'Date',
+                      value: MaterialLocalizations.of(
+                        context,
+                      ).formatMediumDate(facade.intendedStartAt),
+                      icon: Icons.calendar_month_rounded,
+                      onTap: _pickDate,
                     ),
-                  );
-                }).toList(),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _ConstraintPicker(
+                      label: 'Start time',
+                      value: MaterialLocalizations.of(context).formatTimeOfDay(
+                        TimeOfDay.fromDateTime(facade.intendedStartAt),
+                      ),
+                      icon: Icons.schedule_rounded,
+                      onTap: _pickTime,
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 26),
               _FieldLabel(
@@ -106,7 +115,20 @@ class _MissionBuilderViewState extends State<MissionBuilderView> {
               ),
               const SizedBox(height: 12),
               _FieldLabel(
-                title: 'Available time',
+                title: 'Maximum travel distance',
+                value: '${facade.maximumDistance.round()} km',
+              ),
+              Slider(
+                value: facade.maximumDistance,
+                min: 5,
+                max: 50,
+                divisions: 9,
+                label: '${facade.maximumDistance.round()} km',
+                onChanged: facade.updateMaximumDistance,
+              ),
+              const SizedBox(height: 12),
+              _FieldLabel(
+                title: 'Duration',
                 value: '${facade.duration.round()} hours',
               ),
               Slider(
@@ -218,31 +240,9 @@ class _MissionBuilderViewState extends State<MissionBuilderView> {
             builder: (context, _) => FilledButton.icon(
               onPressed: facade.isGenerating || !facade.hasLocation
                   ? null
-                  : () async {
-                      final generated = await facade.generate();
-                      if (!generated || !context.mounted) return;
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute<void>(
-                          builder: (_) => RecommendationsView(
-                            facade: AppDependencies.missionDiscovery(
-                              recommendations: facade.recommendations,
-                            ),
-                            budgetMyr: facade.budget,
-                            availableHours: facade.duration,
-                          ),
-                        ),
-                      );
-                    },
+                  : _generateMissions,
               icon: facade.isGenerating
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
+                  ? const Icon(Icons.local_florist_rounded)
                   : const Icon(Icons.auto_awesome_rounded),
               label: Text(
                 facade.isGenerating
@@ -255,6 +255,97 @@ class _MissionBuilderViewState extends State<MissionBuilderView> {
       ),
     );
   }
+
+  Future<void> _generateMissions() async {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Dialog(
+        child: MalaysiaLoading(
+          message: 'Uncovering safe, less-crowded mysteries nearby...',
+        ),
+      ),
+    );
+    final generated = await facade.generate();
+    if (!mounted) return;
+    Navigator.pop(context);
+    if (!generated) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => RecommendationsView(
+          facade: AppDependencies.missionDiscovery(
+            recommendations: facade.recommendations,
+          ),
+          budgetMyr: facade.budget,
+          availableHours: facade.duration,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickDate() async {
+    final now = DateTime.now();
+    final selected = await showDatePicker(
+      context: context,
+      firstDate: DateTime(now.year, now.month, now.day),
+      lastDate: DateTime(now.year + 1, now.month, now.day),
+      initialDate: facade.intendedStartAt,
+    );
+    if (selected == null) return;
+    final current = facade.intendedStartAt;
+    facade.updateSchedule(
+      DateTime(
+        selected.year,
+        selected.month,
+        selected.day,
+        current.hour,
+        current.minute,
+      ),
+    );
+  }
+
+  Future<void> _pickTime() async {
+    final selected = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(facade.intendedStartAt),
+    );
+    if (selected == null) return;
+    final current = facade.intendedStartAt;
+    facade.updateSchedule(
+      DateTime(
+        current.year,
+        current.month,
+        current.day,
+        selected.hour,
+        selected.minute,
+      ),
+    );
+  }
+}
+
+class _ConstraintPicker extends StatelessWidget {
+  const _ConstraintPicker({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+    child: InputDecorator(
+      decoration: InputDecoration(labelText: label, prefixIcon: Icon(icon)),
+      child: Text(value, style: const TextStyle(fontWeight: FontWeight.w800)),
+    ),
+  );
 }
 
 class _FieldLabel extends StatelessWidget {

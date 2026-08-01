@@ -5,7 +5,6 @@ import '../../controller/user_profile/user_profile_facade_interface.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../widgets/section_header.dart';
-import '../../widgets/status_pill.dart';
 
 class ProfileView extends StatefulWidget {
   const ProfileView({required this.facade, super.key});
@@ -105,23 +104,19 @@ class _ProfileViewState extends State<ProfileView> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 14),
-                  Text(
-                    profile.name,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.titleLarge?.copyWith(color: Colors.white),
-                  ),
-                  Text(
-                    profile.username,
-                    style: const TextStyle(color: Colors.white70),
-                  ),
-                  const SizedBox(height: 14),
-                  StatusPill(
-                    label: 'Level ${profile.level} • ${profile.xp} XP',
-                    color: AppColors.ink,
-                    background: AppColors.mango,
-                  ),
+                  if (!facade.editing) ...[
+                    const SizedBox(height: 14),
+                    Text(
+                      profile.name,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.titleLarge?.copyWith(color: Colors.white),
+                    ),
+                    Text(
+                      profile.username,
+                      style: const TextStyle(color: Colors.white70),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -135,6 +130,26 @@ class _ProfileViewState extends State<ProfileView> {
               TextField(
                 controller: username,
                 decoration: const InputDecoration(labelText: 'Username'),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                enabled: false,
+                initialValue: profile.email,
+                decoration: const InputDecoration(
+                  labelText: 'Email',
+                  helperText: 'The email address cannot be edited.',
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                enabled: false,
+                initialValue: profile.dateOfBirth == null
+                    ? 'Not set'
+                    : '${profile.dateOfBirth!.day}/${profile.dateOfBirth!.month}/${profile.dateOfBirth!.year}',
+                decoration: const InputDecoration(
+                  labelText: 'Date of birth',
+                  helperText: 'Date of birth is fixed after registration.',
+                ),
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
@@ -197,45 +212,47 @@ class _ProfileViewState extends State<ProfileView> {
               ),
               const SizedBox(height: 12),
             ],
-            const SectionHeader(title: 'Explorer details'),
-            const SizedBox(height: 10),
-            Card(
-              child: Column(
-                children: [
-                  _ProfileTile(
-                    icon: Icons.mail_outline_rounded,
-                    label: 'Email',
-                    value: profile.email,
-                  ),
-                  const Divider(height: 1),
-                  _ProfileTile(
-                    icon: Icons.cake_outlined,
-                    label: 'Date of birth',
-                    value: profile.dateOfBirth == null
-                        ? 'Not set'
-                        : '${profile.dateOfBirth!.day}/${profile.dateOfBirth!.month}/${profile.dateOfBirth!.year}',
-                  ),
-                  const Divider(height: 1),
-                  _ProfileTile(
-                    icon: Icons.badge_outlined,
-                    label: 'Gender',
-                    value: (profile.gender ?? 'Not set').replaceAll('_', ' '),
-                  ),
-                  const Divider(height: 1),
-                  _ProfileTile(
-                    icon: Icons.phone_outlined,
-                    label: 'Phone',
-                    value: profile.phoneNumber ?? 'Not set',
-                  ),
-                  const Divider(height: 1),
-                  const _ProfileTile(
-                    icon: Icons.notifications_none_rounded,
-                    label: 'Notifications',
-                    value: 'Invitations and mission updates',
-                  ),
-                ],
+            if (!facade.editing) ...[
+              const SectionHeader(title: 'Explorer details'),
+              const SizedBox(height: 10),
+              Card(
+                child: Column(
+                  children: [
+                    _ProfileTile(
+                      icon: Icons.mail_outline_rounded,
+                      label: 'Email',
+                      value: profile.email,
+                    ),
+                    const Divider(height: 1),
+                    _ProfileTile(
+                      icon: Icons.cake_outlined,
+                      label: 'Date of birth',
+                      value: profile.dateOfBirth == null
+                          ? 'Not set'
+                          : '${profile.dateOfBirth!.day}/${profile.dateOfBirth!.month}/${profile.dateOfBirth!.year}',
+                    ),
+                    const Divider(height: 1),
+                    _ProfileTile(
+                      icon: Icons.badge_outlined,
+                      label: 'Gender',
+                      value: (profile.gender ?? 'Not set').replaceAll('_', ' '),
+                    ),
+                    const Divider(height: 1),
+                    _ProfileTile(
+                      icon: Icons.phone_outlined,
+                      label: 'Phone',
+                      value: profile.phoneNumber ?? 'Not set',
+                    ),
+                    const Divider(height: 1),
+                    const _ProfileTile(
+                      icon: Icons.notifications_none_rounded,
+                      label: 'Notifications',
+                      value: 'Invitations and mission updates',
+                    ),
+                  ],
+                ),
               ),
-            ),
+            ],
             const SizedBox(height: 18),
             OutlinedButton.icon(
               onPressed: () async {

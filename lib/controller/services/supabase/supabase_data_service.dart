@@ -33,16 +33,6 @@ class SupabaseDataService {
             .from('avatars')
             .createSignedUrl(avatarPath, 3600);
       }
-      final ledger = await _client
-          .from('xp_ledger')
-          .select('amount')
-          .eq('user_id', user.id);
-      final xp = ledger.fold<int>(
-        0,
-        (sum, row) => sum + ((row['amount'] as num?)?.round() ?? 0),
-      );
-      profile['xp'] = xp;
-      profile['level'] = (xp ~/ 500) + 1;
       return profile;
     } on PostgrestException catch (error) {
       throw ApiError(error.message, code: error.code);
@@ -157,14 +147,33 @@ class SupabaseDataService {
     }
   }
 
-  Future<MissionLaunch> startMission(String recommendationId) async {
-    _requireUser('Sign in before starting a mission.');
+  Future<MissionLaunch> selectMission(String recommendationId) async {
+    _requireUser('Sign in before choosing a mission.');
     try {
       final response = await _client.functions.invoke(
         'start-mission',
-        body: {'recommendation_id': recommendationId},
+        body: {'action': 'select', 'recommendation_id': recommendationId},
       );
       return MissionLaunch.fromJson(_responseMap(response.data));
+    } on FunctionException catch (error) {
+      throw ApiError(
+        _functionMessage(error, 'The mission could not be saved.'),
+      );
+    }
+  }
+
+  Future<MissionLaunch> startSelectedMission(String sessionId) async {
+    _requireUser('Sign in before starting a mission.');
+    try {
+      await _client.functions.invoke(
+        'start-mission',
+        body: {'action': 'start', 'session_id': sessionId},
+      );
+      final mission = await loadCurrentMission();
+      if (mission == null || mission.sessionId != sessionId) {
+        throw const ApiError('The started mission could not be loaded.');
+      }
+      return mission;
     } on FunctionException catch (error) {
       throw ApiError(_functionMessage(error, 'The mission could not start.'));
     }
@@ -352,6 +361,37 @@ class SupabaseDataService {
       title: data['title'] as String? ?? '',
       content: data['content'] as String? ?? '',
       message: data['message'] as String? ?? '',
+    );
+  }
+
+  Future<void> saveDiaryReflection(String sessionId, String reflection) async {
+    await _passportDiary({
+      'action': 'save_reflection',
+      'session_id': sessionId,
+      'reflection': reflection,
+    });
+  }
+
+  Future<GroupDiaryState> loadGroupDiaryState(String sessionId) async {
+    final data = await _passportDiary({
+      'action': 'group_diary_status',
+      'session_id': sessionId,
+    });
+    return GroupDiaryState.fromJson(data);
+  }
+
+  Future<({DiaryMemory diary, String message})> generateGroupDiary(
+    String sessionId,
+  ) async {
+    final data = await _passportDiary({
+      'action': 'generate_group_diary',
+      'session_id': sessionId,
+    });
+    return (
+      diary: DiaryMemory.fromJson(
+        Map<String, dynamic>.from(data['diary'] as Map),
+      ),
+      message: data['message'] as String? ?? 'Shared diary ready.',
     );
   }
 

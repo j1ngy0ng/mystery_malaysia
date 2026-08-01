@@ -6,6 +6,7 @@ import '../../model/user_profile/app_notification.dart';
 import '../collaborative_travel/invitations_view.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/malaysia_backdrop.dart';
+import '../../widgets/malaysia_loading.dart';
 
 class NotificationsView extends StatefulWidget {
   const NotificationsView({required this.facade, super.key});
@@ -57,7 +58,11 @@ class _NotificationsViewState extends State<NotificationsView> {
               if (facade.isLoading && facade.notifications.isEmpty)
                 const Padding(
                   padding: EdgeInsets.only(top: 80),
-                  child: Center(child: CircularProgressIndicator()),
+                  child: Center(
+                    child: MalaysiaLoading(
+                      message: 'Checking your travel messages...',
+                    ),
+                  ),
                 )
               else if (facade.error != null && facade.notifications.isEmpty)
                 _MessageCard(
@@ -143,12 +148,14 @@ class _NotificationsViewState extends State<NotificationsView> {
   IconData _icon(AppNotification notification) => switch (notification.type) {
     'mission_invitation' => Icons.group_add_rounded,
     'mission_member_removed' => Icons.group_off_rounded,
+    'group_diary_ready' => Icons.auto_stories_rounded,
     _ => Icons.notifications_rounded,
   };
 
   Color _color(AppNotification notification) => switch (notification.type) {
     'mission_invitation' => AppColors.purple,
     'mission_member_removed' => AppColors.hibiscus,
+    'group_diary_ready' => AppColors.mango,
     _ => AppColors.teal,
   };
 

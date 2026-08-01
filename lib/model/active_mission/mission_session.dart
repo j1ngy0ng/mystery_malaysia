@@ -1,8 +1,9 @@
 import '../clue_hint/mystery_clue.dart';
 
-enum MissionStatus { waiting, active, paused, completed, abandoned }
+enum MissionStatus { ready, waiting, active, paused, completed, abandoned }
 
 MissionStatus missionStatusFromJson(String value) => switch (value) {
+  'ready' => MissionStatus.ready,
   'waiting' => MissionStatus.waiting,
   'paused' => MissionStatus.paused,
   'completed' => MissionStatus.completed,

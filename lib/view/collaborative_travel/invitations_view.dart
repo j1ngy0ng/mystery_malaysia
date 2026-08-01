@@ -6,6 +6,7 @@ import '../../model/collaborative_travel/mission_participant.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/section_header.dart';
 import '../../widgets/status_pill.dart';
+import '../../widgets/malaysia_loading.dart';
 import 'shared_mission_view.dart';
 
 class InvitationsView extends StatefulWidget {
@@ -52,7 +53,9 @@ class _InvitationsViewState extends State<InvitationsView> {
           ),
           if (facade.isLoading) ...[
             const SizedBox(height: 20),
-            const Center(child: CircularProgressIndicator()),
+            const Center(
+              child: MalaysiaLoading(message: 'Checking shared missions...'),
+            ),
           ],
           if (facade.error != null) ...[
             const SizedBox(height: 16),

@@ -380,13 +380,15 @@ The Supabase URL and publishable key may be in client configuration. The Supabas
 ```mermaid
 stateDiagram-v2
     [*] --> recommended
-    recommended --> active: start solo mission
+    recommended --> ready: select and save solo mission
+    ready --> active: start mission
     recommended --> waiting: create shared mission
     waiting --> active: members ready and nearby
     active --> paused: pause
     paused --> active: resume
     active --> completed: validated final objective
     active --> abandoned: abandon
+    ready --> abandoned: abandon
     paused --> abandoned: abandon
     completed --> reflected: submit reflection
     reflected --> diaryReady: generate diary
@@ -395,7 +397,7 @@ stateDiagram-v2
     diaryReady --> [*]
 ```
 
-The `ActiveMissionController` requests transitions. The `MissionSession` Model represents status. `SupabaseDataService` invokes protected functions. PostgreSQL constraints and functions remain authoritative for completion and rewards.
+The `ActiveMissionController` requests transitions. The `MissionSession` Model represents status. `SupabaseDataService` invokes protected functions. While an active mission screen is open, the Controller samples foreground GPS every 15 seconds; a server-confirmed `reached` proximity automatically invokes `confirm-arrival` once for that stage and the View presents the destination guide. PostgreSQL constraints and functions remain authoritative for completion and rewards.
 
 ## 8. Supabase data
 

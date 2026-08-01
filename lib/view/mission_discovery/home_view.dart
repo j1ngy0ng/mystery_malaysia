@@ -97,15 +97,24 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
               title: currentMission!.title,
               subtitle:
                   '${currentMission!.region} • Stage ${currentMission!.currentStage} of ${currentMission!.totalStages}',
-              status: currentMission!.status == MissionStatus.paused
-                  ? 'Paused'
-                  : 'Active',
+              status: switch (currentMission!.status) {
+                MissionStatus.ready => 'Ready to start',
+                MissionStatus.paused => 'Paused',
+                _ => 'Active',
+              },
               emoji: '🧭',
-              color: currentMission!.status == MissionStatus.paused
-                  ? AppColors.purple
-                  : AppColors.green,
+              color: switch (currentMission!.status) {
+                MissionStatus.ready => AppColors.mango,
+                MissionStatus.paused => AppColors.purple,
+                _ => AppColors.green,
+              },
               progress:
                   currentMission!.currentStage / currentMission!.totalStages,
+              actionLabel: switch (currentMission!.status) {
+                MissionStatus.ready => 'Start mission',
+                MissionStatus.paused => 'Resume mission',
+                _ => 'Continue mission',
+              },
               onTap: () async {
                 await Navigator.push(
                   context,
@@ -288,6 +297,7 @@ class _MissionSummaryCard extends StatelessWidget {
     required this.emoji,
     required this.color,
     required this.progress,
+    required this.actionLabel,
     required this.onTap,
   });
 
@@ -297,6 +307,7 @@ class _MissionSummaryCard extends StatelessWidget {
   final String emoji;
   final Color color;
   final double progress;
+  final String actionLabel;
   final VoidCallback onTap;
 
   @override
@@ -348,11 +359,19 @@ class _MissionSummaryCard extends StatelessWidget {
                       color: color,
                       backgroundColor: color.withValues(alpha: .12),
                     ),
+                    const SizedBox(height: 4),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton.icon(
+                        onPressed: onTap,
+                        iconAlignment: IconAlignment.end,
+                        icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+                        label: Text(actionLabel),
+                      ),
+                    ),
                   ],
                 ),
               ),
-              const SizedBox(width: 6),
-              const Icon(Icons.chevron_right_rounded),
             ],
           ),
         ),

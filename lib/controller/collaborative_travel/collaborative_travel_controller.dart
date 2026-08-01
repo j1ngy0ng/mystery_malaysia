@@ -82,12 +82,6 @@ class CollaborativeTravelController extends ChangeNotifier {
   Future<bool> start() =>
       _mutation({'action': 'start', 'session_id': sessionId});
 
-  Future<bool> submitReflection(String reflection) => _mutation({
-    'action': 'reflection',
-    'session_id': sessionId,
-    'reflection': reflection,
-  });
-
   Future<bool> _mutation(
     Map<String, dynamic> body, {
     bool reloadOverview = false,

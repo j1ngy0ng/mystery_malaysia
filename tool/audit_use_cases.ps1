@@ -1,3 +1,5 @@
+param([switch]$KeepData)
+
 $ErrorActionPreference = 'Stop'
 
 $config = Get-Content '.env.local.json' -Raw | ConvertFrom-Json
@@ -67,6 +69,7 @@ function New-AuditUser {
     [pscustomobject]@{
         Id = $created.id
         Email = $email
+        Password = $password
         Headers = @{
             apikey = $anon
             Authorization = "Bearer $($token.access_token)"
@@ -83,6 +86,8 @@ function Invoke-Function {
 $hostUser = $null
 $memberUser = $null
 $sessionId = $null
+$selectedSessionId = $null
+$pausedSessionId = $null
 $requestId = $null
 
 try {
@@ -116,8 +121,28 @@ try {
         stop_number = 2
     }
 
-    $shared = Invoke-Function 'start-mission' $hostUser.Headers @{
+    $selected = Invoke-Function 'start-mission' $hostUser.Headers @{
+        action = 'select'
         recommendation_id = [string]$recommendations[0].id
+    }
+    $selectedSessionId = $selected.session_id
+    if ($selected.status -ne 'ready') {
+        throw 'Selecting a solo mission did not persist it as ready.'
+    }
+    $started = Invoke-Function 'start-mission' $hostUser.Headers @{
+        action = 'start'
+        session_id = $selectedSessionId
+    }
+    if ($started.status -ne 'active') {
+        throw 'Starting a saved mission did not activate it.'
+    }
+    Invoke-Function 'mission-control' $hostUser.Headers @{
+        action = 'abandon'
+        session_id = $selectedSessionId
+    } | Out-Null
+
+    $shared = Invoke-Function 'start-mission' $hostUser.Headers @{
+        recommendation_id = [string]$recommendations[1].id
         mode = 'collaborative'
     }
     $sessionId = $shared.session_id
@@ -274,6 +299,54 @@ try {
         reflection = 'A memorable shared mystery journey across three verified destinations.'
     }
 
+    # Keep one shared mission paused so retained demo accounts can exercise
+    # resume, clues, hints, crew state, pause and abandon controls.
+    if ($KeepData) {
+      $pausedShared = Invoke-Function 'start-mission' $hostUser.Headers @{
+        recommendation_id = [string]$recommendations[2].id
+        mode = 'collaborative'
+    }
+    $pausedSessionId = $pausedShared.session_id
+    Invoke-Function 'shared-mission' $hostUser.Headers @{
+        action = 'invite'
+        session_id = $pausedSessionId
+        email = $memberUser.Email
+    } | Out-Null
+    $memberOverview = Invoke-Function 'shared-mission' $memberUser.Headers @{
+        action = 'overview'
+    }
+    $pendingInvitation = @($memberOverview.invitations | Where-Object {
+        $_.session_id -eq $pausedSessionId
+    })[0]
+    Invoke-Function 'shared-mission' $memberUser.Headers @{
+        action = 'respond'
+        invitation_id = $pendingInvitation.id
+        response = 'accepted'
+    } | Out-Null
+    Invoke-Function 'shared-mission' $hostUser.Headers @{
+        action = 'ready'
+        session_id = $pausedSessionId
+        ready = $true
+    } | Out-Null
+    Invoke-Function 'shared-mission' $memberUser.Headers @{
+        action = 'ready'
+        session_id = $pausedSessionId
+        ready = $true
+    } | Out-Null
+    Invoke-Function 'shared-mission' $hostUser.Headers @{
+        action = 'start'
+        session_id = $pausedSessionId
+    } | Out-Null
+    Invoke-Function 'mission-control' $hostUser.Headers @{
+        action = 'hint'
+        session_id = $pausedSessionId
+    } | Out-Null
+    Invoke-Function 'mission-control' $hostUser.Headers @{
+        action = 'pause'
+        session_id = $pausedSessionId
+    } | Out-Null
+    }
+
     if (@($passport.stamps).Count -ne 3) {
         throw "Expected three verified stamps, received $(@($passport.stamps).Count)."
     }
@@ -305,6 +378,8 @@ try {
         mission_lists = $recommendations.Count
         stops_per_mission = 3
         stop_regenerated = $regenerated.recommendation.id -eq $recommendations[0].id
+        selected_mission_saved = $selected.status -eq 'ready'
+        saved_mission_started = $started.status -eq 'active'
         destination_specific_clue = $specificClue
         registered_invitation = $invite.registered
         member_removed_and_reinvited = $repeatInvite.registered
@@ -321,11 +396,28 @@ try {
         badges = @($passport.badges).Count
         diary_generated = $diary.generated
         reflection_saved = [bool]$reflection.message
+        retained = [bool]$KeepData
+        paused_shared_mission = [bool]$pausedSessionId
+        demo_accounts = if ($KeepData) {
+            @(
+                [pscustomobject]@{
+                    role = 'host'
+                    email = $hostUser.Email
+                    password = $hostUser.Password
+                }
+                [pscustomobject]@{
+                    role = 'member'
+                    email = $memberUser.Email
+                    password = $memberUser.Password
+                }
+            )
+        } else { @() }
     } | ConvertTo-Json
     [Console]::WriteLine($auditReport)
 }
 finally {
-    if ($hostUser) {
+    if (-not $KeepData) {
+      if ($hostUser) {
         try {
             Invoke-Json Delete "$baseUrl/auth/v1/admin/users/$($hostUser.Id)" $adminHeaders $null |
                 Out-Null
@@ -346,11 +438,26 @@ finally {
         }
         catch {}
     }
+    if ($selectedSessionId) {
+        try {
+            Invoke-Json Delete "$baseUrl/rest/v1/mission_sessions?id=eq.$selectedSessionId" $adminHeaders $null |
+                Out-Null
+        }
+        catch {}
+    }
+    if ($pausedSessionId) {
+        try {
+            Invoke-Json Delete "$baseUrl/rest/v1/mission_sessions?id=eq.$pausedSessionId" $adminHeaders $null |
+                Out-Null
+        }
+        catch {}
+    }
     if ($requestId) {
         try {
             Invoke-Json Delete "$baseUrl/rest/v1/mission_requests?id=eq.$requestId" $adminHeaders $null |
                 Out-Null
         }
         catch {}
+    }
     }
 }

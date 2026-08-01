@@ -12,6 +12,7 @@ type MissionInput = {
   available_minutes: number;
   budget_myr: number;
   maximum_distance_km?: number;
+  intended_start_at?: string;
   categories?: string[];
   group_type?: "solo" | "couple" | "family" | "friends";
 };
@@ -89,7 +90,6 @@ type GeneratedRecommendation = {
   estimated_budget_myr: number;
   total_distance_km: number;
   difficulty: "easy" | "moderate" | "hard";
-  xp_reward: number;
   tags: string[];
   destination_ids: string[];
 };
@@ -117,7 +117,6 @@ const responseSchema = {
           "estimated_budget_myr",
           "total_distance_km",
           "difficulty",
-          "xp_reward",
           "tags",
           "destination_ids",
         ],
@@ -132,7 +131,6 @@ const responseSchema = {
             type: "STRING",
             enum: ["easy", "moderate", "hard"],
           },
-          xp_reward: { type: "INTEGER" },
           tags: { type: "ARRAY", items: { type: "STRING" } },
           destination_ids: {
             type: "ARRAY",
@@ -205,6 +203,7 @@ export default {
           available_minutes: input.available_minutes,
           budget_myr: input.budget_myr,
           maximum_distance_km: maximumDistanceKm,
+          intended_start_at: input.intended_start_at ?? null,
           categories,
           group_type: groupType,
           status: "generating",
@@ -357,10 +356,10 @@ export default {
           estimated_budget_myr: saved.estimated_budget_myr,
           total_distance_km: saved.total_distance_km,
           difficulty: saved.difficulty,
-          xp_reward: saved.xp_reward,
           tags: saved.tags,
           recommendation_rank: saved.recommendation_rank,
           stops: destination_ids.length,
+          stop_previews: buildStopPreviews(destination_ids, candidates),
         });
       }
 
@@ -431,6 +430,34 @@ async function expireOldReservations(admin: any): Promise<void> {
     .eq("status", "reserved")
     .lt("expires_at", new Date().toISOString());
   if (error) throw error;
+}
+
+function buildStopPreviews(
+  destinationIds: string[],
+  candidates: DestinationCandidate[],
+): string[] {
+  const labels: Record<string, string> = {
+    culture: "local culture",
+    history: "heritage stories",
+    nature: "nature and scenery",
+    food: "local flavours",
+    museum: "curated discoveries",
+    park: "an outdoor escape",
+    architecture: "distinctive architecture",
+  };
+  return destinationIds.map((id) => {
+    const destination = candidates.find((candidate) => candidate.id === id);
+    const themes = (destination?.categories ?? [])
+      .map((category) => labels[category.toLowerCase()] ?? category.toLowerCase())
+      .filter(Boolean)
+      .slice(0, 2);
+    const focus = themes.length ? themes.join(" and ") : "a local hidden gem";
+    const minutes = Math.max(
+      30,
+      Number(destination?.estimated_duration_minutes ?? 60),
+    );
+    return `Expect ${focus} in a roughly ${minutes}-minute mystery stop. The exact place remains hidden until arrival.`;
+  });
 }
 
 async function loadUserDestinationHistory(
@@ -977,8 +1004,8 @@ async function cacheEligiblePlaces({
         radius_metres: 120,
       },
       hint_text: additionalDestinationHint(source),
-      clue_xp_reward: 100,
-      hint_xp_cost: 20,
+      clue_xp_reward: 0,
+      hint_xp_cost: 0,
       ai_model: null,
       prompt_version: "places-specific-location-v2",
     };
@@ -1093,6 +1120,7 @@ async function callGemini({
       available_minutes: input.available_minutes,
       budget_myr: input.budget_myr,
       maximum_distance_km: maximumDistanceKm,
+      intended_start_at: input.intended_start_at,
       categories,
       group_type: input.group_type ?? "solo",
     })}`,
@@ -1548,7 +1576,6 @@ function validateRecommendations(
       difficulty: ["easy", "moderate", "hard"].includes(item.difficulty)
         ? item.difficulty
         : "easy",
-      xp_reward: Math.round(clamp(item.xp_reward ?? 0, 0, 5000)),
       tags: (item.tags ?? [])
         .map((tag) => cleanText(tag, 30, ""))
         .filter(Boolean)
@@ -1567,6 +1594,12 @@ function validateInput(input: MissionInput): void {
   assertNumber(input.origin_longitude, -180, 180, "origin_longitude");
   assertNumber(input.available_minutes, 30, 1440, "available_minutes");
   assertNumber(input.budget_myr, 0, 10000, "budget_myr");
+  if (
+    input.intended_start_at !== undefined &&
+    Number.isNaN(Date.parse(input.intended_start_at))
+  ) {
+    throw new Error("intended_start_at is invalid.");
+  }
   if (
     input.group_type !== undefined &&
     !["solo", "couple", "family", "friends"].includes(input.group_type)

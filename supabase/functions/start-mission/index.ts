@@ -1,7 +1,9 @@
 import { withSupabase } from "npm:@supabase/server@1.4.1";
 
 type StartMissionInput = {
+  action?: "select" | "start";
   recommendation_id?: string;
+  session_id?: string;
   mode?: "solo" | "collaborative";
 };
 
@@ -22,16 +24,19 @@ export default {
         status: 400,
       });
     }
-    const recommendationId = input.recommendation_id?.trim();
-    if (!recommendationId || !isUuid(recommendationId)) {
-      return Response.json({ message: "The mission choice is invalid." }, {
-        status: 400,
-      });
-    }
-
     const admin = context.supabaseAdmin;
     let sessionId: string | null = null;
     try {
+      if (input.action === "start") {
+        return await startSelectedMission(admin, userId, input.session_id);
+      }
+
+      const recommendationId = input.recommendation_id?.trim();
+      if (!recommendationId || !isUuid(recommendationId)) {
+        return Response.json({ message: "The mission choice is invalid." }, {
+          status: 400,
+        });
+      }
       const { data: current, error: currentError } = await admin
         .from("user_current_missions")
         .select("session_id")
@@ -110,6 +115,12 @@ export default {
 
       const now = new Date().toISOString();
       const collaborative = input.mode === "collaborative";
+      const selectedOnly = !collaborative && input.action === "select";
+      const status = collaborative
+        ? "waiting"
+        : selectedOnly
+        ? "ready"
+        : "active";
       const { data: session, error: sessionError } = await admin
         .from("mission_sessions")
         .insert({
@@ -117,9 +128,9 @@ export default {
           title: recommendation.title,
           mode: collaborative ? "collaborative" : "solo",
           travel_type: collaborative ? "friends" : "solo",
-          status: collaborative ? "waiting" : "active",
+          status,
           current_stage: 1,
-          started_at: collaborative ? null : now,
+          started_at: status === "active" ? now : null,
         })
         .select("id,title,current_stage")
         .single();
@@ -132,8 +143,8 @@ export default {
           session_id: sessionId,
           user_id: userId,
           role: "host",
-          ready: !collaborative,
-          status: collaborative ? "joined" : "navigating",
+          ready: status === "active",
+          status: status === "active" ? "navigating" : "joined",
         });
       if (participantError) throw participantError;
 
@@ -143,10 +154,12 @@ export default {
           stops.map((stop) => ({
             session_id: sessionId,
             stage_number: stop.stop_number,
-            status: !collaborative && stop.stop_number === 1
+            status: status === "active" && stop.stop_number === 1
               ? "active"
               : "locked",
-            unlocked_at: !collaborative && stop.stop_number === 1 ? now : null,
+            unlocked_at: status === "active" && stop.stop_number === 1
+              ? now
+              : null,
           })),
         )
         .select("id,stage_number");
@@ -223,7 +236,11 @@ export default {
       await admin.from("mission_session_events").insert({
         session_id: sessionId,
         actor_id: userId,
-        event_type: collaborative ? "shared_created" : "started",
+        event_type: collaborative
+          ? "shared_created"
+          : selectedOnly
+          ? "selected"
+          : "started",
         payload: { recommendation_id: recommendationId },
       });
 
@@ -244,6 +261,7 @@ export default {
         region: destinationById.get(firstStop.destination_id)!.state,
         current_stage: 1,
         total_stages: 3,
+        status,
         stage_id: firstStage.id,
         clue: {
           number: 1,
@@ -263,6 +281,86 @@ export default {
     }
   }),
 };
+
+async function startSelectedMission(
+  admin: any,
+  userId: string,
+  rawSessionId?: string,
+): Promise<Response> {
+  const sessionId = rawSessionId?.trim();
+  if (!sessionId || !isUuid(sessionId)) {
+    return Response.json({ message: "The saved mission is invalid." }, {
+      status: 400,
+    });
+  }
+
+  const [{ data: session, error: sessionError }, {
+    data: participant,
+    error: participantError,
+  }] = await Promise.all([
+    admin.from("mission_sessions").select("id,mode,status")
+      .eq("id", sessionId).maybeSingle(),
+    admin.from("mission_participants").select("role,status")
+      .eq("session_id", sessionId).eq("user_id", userId)
+      .neq("status", "left").maybeSingle(),
+  ]);
+  if (sessionError) throw sessionError;
+  if (participantError) throw participantError;
+  if (!session || !participant) {
+    return Response.json({ message: "You cannot start this mission." }, {
+      status: 403,
+    });
+  }
+  if (session.mode !== "solo") {
+    return Response.json({
+      message: "Shared missions must be started from their lobby.",
+    }, { status: 409 });
+  }
+  if (session.status === "active") {
+    return Response.json({ session_id: sessionId, status: "active" });
+  }
+  if (session.status !== "ready") {
+    return Response.json({
+      message: "This mission is not waiting to be started.",
+    }, { status: 409 });
+  }
+
+  const now = new Date().toISOString();
+  const { data: started, error: startError } = await admin
+    .from("mission_sessions")
+    .update({ status: "active", started_at: now })
+    .eq("id", sessionId)
+    .eq("status", "ready")
+    .select("id")
+    .maybeSingle();
+  if (startError) throw startError;
+  if (!started) {
+    return Response.json({
+      message: "The mission status changed. Refresh and try again.",
+    }, { status: 409 });
+  }
+
+  const { error: stageError } = await admin.from("mission_stages")
+    .update({ status: "active", unlocked_at: now })
+    .eq("session_id", sessionId)
+    .eq("stage_number", 1)
+    .eq("status", "locked");
+  if (stageError) throw stageError;
+
+  const { error: participantUpdateError } = await admin
+    .from("mission_participants")
+    .update({ ready: true, status: "navigating" })
+    .eq("session_id", sessionId)
+    .eq("user_id", userId);
+  if (participantUpdateError) throw participantUpdateError;
+
+  await admin.from("mission_session_events").insert({
+    session_id: sessionId,
+    actor_id: userId,
+    event_type: "started",
+  });
+  return Response.json({ session_id: sessionId, status: "active" });
+}
 
 function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i

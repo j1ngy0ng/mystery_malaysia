@@ -10,6 +10,7 @@ class PassportDiaryController extends ChangeNotifier {
 
   final SupabaseDataService _dataService;
   TravellerProgress? progress;
+  GroupDiaryState? groupDiaryState;
   bool isLoading = false;
   String? error;
 
@@ -28,11 +29,8 @@ class PassportDiaryController extends ChangeNotifier {
 
   List<Achievement> get achievements => progress?.achievements ?? const [];
   List<DiaryMemory> get memories => progress?.memories ?? const [];
-  int get xp => progress?.xp ?? 0;
-  int get level => progress?.level ?? 1;
-  int get nextLevelXp => progress?.nextLevelXp ?? 500;
-  double get levelProgress => progress?.levelProgress ?? 0;
-
+  List<EligibleDiaryMission> get eligibleDiaryMissions =>
+      progress?.eligibleDiaryMissions ?? const [];
   Future<void> load() async {
     isLoading = true;
     error = null;
@@ -68,6 +66,59 @@ class PassportDiaryController extends ChangeNotifier {
         content: result.content,
         message: result.message,
       );
+    } on ApiError catch (apiError) {
+      error = apiError.message;
+      return null;
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> submitReflection(String sessionId, String reflection) async {
+    if (reflection.trim().length < 10) {
+      error = 'Please provide more details about your travel experience.';
+      notifyListeners();
+      return false;
+    }
+    isLoading = true;
+    error = null;
+    notifyListeners();
+    try {
+      await _dataService.saveDiaryReflection(sessionId, reflection);
+      return true;
+    } on ApiError catch (apiError) {
+      error = apiError.message;
+      return false;
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadGroupDiary(String sessionId) async {
+    isLoading = true;
+    error = null;
+    notifyListeners();
+    try {
+      groupDiaryState = await _dataService.loadGroupDiaryState(sessionId);
+    } on ApiError catch (apiError) {
+      error = apiError.message;
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<String?> generateGroupDiary(String sessionId) async {
+    isLoading = true;
+    error = null;
+    notifyListeners();
+    try {
+      final result = await _dataService.generateGroupDiary(sessionId);
+      await loadGroupDiary(sessionId);
+      await load();
+      return result.message;
     } on ApiError catch (apiError) {
       error = apiError.message;
       return null;

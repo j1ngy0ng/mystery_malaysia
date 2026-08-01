@@ -24,17 +24,20 @@ class ActiveMissionView extends StatefulWidget {
 class _ActiveMissionViewState extends State<ActiveMissionView> {
   late final IActiveMissionFacade facade;
   Timer? locationTimer;
+  bool arrivalSheetOpen = false;
 
   @override
   void initState() {
     super.initState();
     facade = widget.facade;
-    facade.refreshLocation();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _trackLocation());
     if (facade.sessionId != null) {
-      locationTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      locationTimer = Timer.periodic(const Duration(seconds: 15), (_) async {
         if (facade.session.status == MissionStatus.active &&
-            !facade.isLocating) {
-          facade.refreshLocation();
+            !facade.isLocating &&
+            !facade.isVerifying &&
+            !arrivalSheetOpen) {
+          await _trackLocation();
         }
       });
     }
@@ -54,6 +57,7 @@ class _ActiveMissionViewState extends State<ActiveMissionView> {
       builder: (context, _) {
         final session = facade.session;
         final paused = session.status == MissionStatus.paused;
+        final ready = session.status == MissionStatus.ready;
         return Scaffold(
           appBar: AppBar(
             title: const Text('Active mission'),
@@ -95,11 +99,21 @@ class _ActiveMissionViewState extends State<ActiveMissionView> {
                         ),
                       ),
                       StatusPill(
-                        label: paused ? 'Paused' : 'Live',
-                        icon: paused
+                        label: ready
+                            ? 'Ready'
+                            : paused
+                            ? 'Paused'
+                            : 'Live',
+                        icon: ready
+                            ? Icons.flag_circle_outlined
+                            : paused
                             ? Icons.pause_rounded
                             : Icons.navigation_rounded,
-                        color: paused ? AppColors.purple : AppColors.green,
+                        color: ready
+                            ? AppColors.mango
+                            : paused
+                            ? AppColors.purple
+                            : AppColors.green,
                       ),
                     ],
                   ),
@@ -156,14 +170,14 @@ class _ActiveMissionViewState extends State<ActiveMissionView> {
                     const SizedBox(height: 12),
                     _LocationErrorCard(
                       message: facade.locationError!,
-                      onRetry: facade.refreshLocation,
+                      onRetry: _trackLocation,
                     ),
                   ],
                   if (facade.arrivalError != null) ...[
                     const SizedBox(height: 12),
                     _LocationErrorCard(
                       message: facade.arrivalError!,
-                      onRetry: () => _verifyArrival(context),
+                      onRetry: _trackLocation,
                     ),
                   ],
                   const SizedBox(height: 18),
@@ -173,7 +187,7 @@ class _ActiveMissionViewState extends State<ActiveMissionView> {
                     children: [
                       Expanded(
                         child: OutlinedButton.icon(
-                          onPressed: paused
+                          onPressed: paused || ready
                               ? null
                               : () => Navigator.push(
                                   context,
@@ -227,7 +241,7 @@ class _ActiveMissionViewState extends State<ActiveMissionView> {
                     ),
                 ],
               ),
-              if (paused)
+              if (paused || ready)
                 Positioned.fill(
                   child: Container(
                     color: AppColors.canvas.withValues(alpha: .88),
@@ -239,26 +253,52 @@ class _ActiveMissionViewState extends State<ActiveMissionView> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Text('⏸️', style: TextStyle(fontSize: 52)),
+                            Text(
+                              ready ? '🧭' : '⏸️',
+                              style: const TextStyle(fontSize: 52),
+                            ),
                             const SizedBox(height: 12),
                             Text(
-                              'Mission paused',
+                              ready ? 'Mission ready' : 'Mission paused',
                               style: Theme.of(context).textTheme.titleLarge,
                             ),
                             const SizedBox(height: 6),
-                            const Text(
-                              'Your stage, clue and progress are safely saved.',
+                            Text(
+                              ready
+                                  ? 'Your chosen mystery is saved. Start whenever you are ready to begin location tracking.'
+                                  : 'Your stage, clue and progress are safely saved.',
                               textAlign: TextAlign.center,
                             ),
+                            if (facade.arrivalError != null) ...[
+                              const SizedBox(height: 10),
+                              Text(
+                                facade.arrivalError!,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  color: AppColors.hibiscus,
+                                ),
+                              ),
+                            ],
                             const SizedBox(height: 18),
                             SizedBox(
                               width: double.infinity,
                               child: FilledButton.icon(
                                 onPressed: facade.isUpdatingStatus
                                     ? null
+                                    : ready
+                                    ? _startMission
                                     : () => _togglePause(context),
-                                icon: const Icon(Icons.play_arrow_rounded),
-                                label: const Text('Resume mission'),
+                                icon: facade.isUpdatingStatus
+                                    ? const SizedBox.square(
+                                        dimension: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : const Icon(Icons.play_arrow_rounded),
+                                label: Text(
+                                  ready ? 'Start mission' : 'Resume mission',
+                                ),
                               ),
                             ),
                           ],
@@ -270,43 +310,46 @@ class _ActiveMissionViewState extends State<ActiveMissionView> {
             ],
           ),
           bottomNavigationBar:
-              paused || session.status == MissionStatus.completed
+              paused || ready || session.status == MissionStatus.completed
               ? null
               : SafeArea(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(20, 8, 20, 14),
-                    child: FilledButton.icon(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: facade.canConfirmArrival
-                            ? AppColors.green
-                            : AppColors.hibiscus,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 14,
                       ),
-                      onPressed: facade.isLocating || facade.isVerifying
-                          ? null
-                          : facade.canConfirmArrival
-                          ? () => _verifyArrival(context)
-                          : facade.refreshLocation,
-                      icon: facade.isLocating || facade.isVerifying
-                          ? const SizedBox.square(
+                      decoration: BoxDecoration(
+                        color: AppColors.paleHibiscus,
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      child: Row(
+                        children: [
+                          if (facade.isLocating || facade.isVerifying)
+                            const SizedBox.square(
                               dimension: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                color: Colors.white,
+                                color: AppColors.hibiscus,
                               ),
                             )
-                          : Icon(
-                              facade.canConfirmArrival
-                                  ? Icons.location_on_rounded
-                                  : Icons.my_location_rounded,
+                          else
+                            const Icon(
+                              Icons.location_searching_rounded,
+                              color: AppColors.hibiscus,
                             ),
-                      label: Text(
-                        facade.isLocating
-                            ? 'Checking your location...'
-                            : facade.isVerifying
-                            ? 'Verifying arrival securely...'
-                            : facade.canConfirmArrival
-                            ? 'Confirm I have arrived'
-                            : 'Refresh GPS location',
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              facade.isLocating
+                                  ? 'Checking your location...'
+                                  : facade.isVerifying
+                                  ? 'Verifying arrival automatically...'
+                                  : 'Arrival verification is automatic while this mission is open.',
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -345,7 +388,8 @@ class _ActiveMissionViewState extends State<ActiveMissionView> {
 
   Future<void> _togglePause(BuildContext context) async {
     if (facade.session.status == MissionStatus.paused) {
-      await facade.togglePause();
+      final resumed = await facade.togglePause();
+      if (resumed) await _trackLocation();
       return;
     }
     final confirmed = await showDialog<bool>(
@@ -370,9 +414,28 @@ class _ActiveMissionViewState extends State<ActiveMissionView> {
     if (confirmed == true) await facade.togglePause();
   }
 
-  Future<void> _verifyArrival(BuildContext context) async {
-    final result = await facade.confirmArrival();
-    if (!context.mounted || result == null) return;
+  Future<void> _startMission() async {
+    final started = await facade.start();
+    if (started) await _trackLocation();
+  }
+
+  Future<void> _trackLocation() async {
+    if (!mounted ||
+        arrivalSheetOpen ||
+        facade.isLocating ||
+        facade.isVerifying ||
+        facade.session.status != MissionStatus.active) {
+      return;
+    }
+    final result = await facade.refreshLocation();
+    if (!mounted || result == null) return;
+    arrivalSheetOpen = true;
+    await _showDestinationGuide(result);
+    arrivalSheetOpen = false;
+  }
+
+  Future<void> _showDestinationGuide(ArrivalResult result) async {
+    if (!mounted) return;
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -464,11 +527,6 @@ class _DestinationGuideSheet extends StatelessWidget {
                 label: 'GPS verified',
                 icon: Icons.verified_rounded,
                 color: AppColors.green,
-              ),
-              StatusPill(
-                label: '+${result.xpAwarded} XP',
-                icon: Icons.auto_awesome_rounded,
-                color: AppColors.purple,
               ),
               const StatusPill(
                 label: 'Stamp collected',

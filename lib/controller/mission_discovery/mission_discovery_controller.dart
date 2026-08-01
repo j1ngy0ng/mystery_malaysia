@@ -18,9 +18,10 @@ class MissionDiscoveryController extends ChangeNotifier {
   final LocationService _locationService;
   final GeminiService _geminiService;
 
-  String selectedCategory = 'Culture';
   double budget = 120;
   double duration = 4;
+  double maximumDistance = 20;
+  DateTime intendedStartAt = _initialStart();
   bool isGenerating = false;
   bool isLocating = false;
   AppLocation? currentLocation;
@@ -34,14 +35,6 @@ class MissionDiscoveryController extends ChangeNotifier {
     if (location == null) return 'Waiting for GPS';
     return '${location.coordinateLabel} • GPS detected';
   }
-
-  final categories = const [
-    'Culture',
-    'Food',
-    'Nature',
-    'History',
-    'Hidden gems',
-  ];
 
   static const demoRecommendations = [
     MissionRecommendation(
@@ -84,8 +77,8 @@ class MissionDiscoveryController extends ChangeNotifier {
 
   final List<MissionRecommendation> recommendations;
 
-  void selectCategory(String value) {
-    selectedCategory = value;
+  void updateSchedule(DateTime value) {
+    intendedStartAt = value;
     notifyListeners();
   }
 
@@ -96,6 +89,11 @@ class MissionDiscoveryController extends ChangeNotifier {
 
   void updateDuration(double value) {
     duration = value;
+    notifyListeners();
+  }
+
+  void updateMaximumDistance(double value) {
+    maximumDistance = value;
     notifyListeners();
   }
 
@@ -115,6 +113,11 @@ class MissionDiscoveryController extends ChangeNotifier {
   }
 
   Future<bool> generate() async {
+    if (!intendedStartAt.isAfter(DateTime.now())) {
+      generationError = 'Choose a start date and time in the future.';
+      notifyListeners();
+      return false;
+    }
     final location = currentLocation;
     if (location == null) {
       generationError = 'A GPS location is required to generate missions.';
@@ -128,9 +131,11 @@ class MissionDiscoveryController extends ChangeNotifier {
     try {
       final generated = await _geminiService.generateMissions(
         origin: location,
-        categories: [selectedCategory],
+        categories: const [],
         availableMinutes: (duration * 60).round(),
         budgetMyr: budget,
+        maximumDistanceKm: maximumDistance,
+        intendedStartAt: intendedStartAt,
       );
       recommendations
         ..clear()
@@ -143,5 +148,10 @@ class MissionDiscoveryController extends ChangeNotifier {
       isGenerating = false;
       notifyListeners();
     }
+  }
+
+  static DateTime _initialStart() {
+    final tomorrow = DateTime.now().add(const Duration(days: 1));
+    return DateTime(tomorrow.year, tomorrow.month, tomorrow.day, 9);
   }
 }
