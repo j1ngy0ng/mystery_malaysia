@@ -33,7 +33,8 @@ export default {
           { data: diaries, error: diariesError },
         ] = await Promise.all([
           admin.from("user_stamps").select(
-            "earned_at,session_id,stamp_definitions!inner(name,rarity,destinations!inner(name,state))",
+            "earned_at,session_id,mission_sessions!inner(title)," +
+              "stamp_definitions!inner(name,rarity,destinations!inner(name,state))",
           ).eq("user_id", userId).order("earned_at", { ascending: false }),
           admin.from("verified_visits").select("stage_id").eq("user_id", userId),
           admin.from("mission_participants").select(
@@ -75,6 +76,7 @@ export default {
         const stamps = (stampRows ?? []).map((row: any) => {
           const definition = row.stamp_definitions;
           const destination = definition.destinations;
+          const mission = row.mission_sessions;
           return {
             place: destination.name,
             state: destination.state,
@@ -82,6 +84,7 @@ export default {
             rarity: definition.rarity,
             earned_at: row.earned_at,
             session_id: row.session_id,
+            mission_title: mission?.title,
           };
         });
         const states = new Set(stamps.map((stamp: any) => stamp.state)).size;

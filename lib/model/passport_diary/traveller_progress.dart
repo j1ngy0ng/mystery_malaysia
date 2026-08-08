@@ -8,6 +8,7 @@ class PassportStamp {
     this.rarity = 'common',
     this.earnedAt,
     this.sessionId,
+    this.missionTitle,
   });
 
   final String place;
@@ -18,6 +19,7 @@ class PassportStamp {
   final String rarity;
   final DateTime? earnedAt;
   final String? sessionId;
+  final String? missionTitle;
 
   factory PassportStamp.fromJson(Map<String, dynamic> json) => PassportStamp(
     place: json['place'] as String? ?? 'Mystery destination',
@@ -28,6 +30,7 @@ class PassportStamp {
     rarity: json['rarity'] as String? ?? 'common',
     earnedAt: DateTime.tryParse(json['earned_at'] as String? ?? ''),
     sessionId: json['session_id'] as String?,
+    missionTitle: json['mission_title'] as String?,
   );
 }
 
@@ -45,9 +48,34 @@ class MissionStamp {
     return states.length == 1 ? states.first : 'Malaysia';
   }
 
-  String get name => '$state Mystery Trail';
+  String get name {
+    final title = pieces.isEmpty ? null : pieces.first.missionTitle?.trim();
+    return title?.isNotEmpty == true ? title! : '$state Mystery Trail';
+  }
+
   String get place => name;
   String get emoji => '';
+}
+
+String missionBadgeCode(String state) {
+  final name = state.toLowerCase();
+  if (name.contains('johor')) return 'JHR';
+  if (name.contains('kedah')) return 'KDH';
+  if (name.contains('kelantan')) return 'KTN';
+  if (name.contains('melaka') || name.contains('malacca')) return 'MLK';
+  if (name.contains('negeri sembilan')) return 'NSN';
+  if (name.contains('pahang')) return 'PHG';
+  if (name.contains('penang') || name.contains('pulau pinang')) return 'PNG';
+  if (name.contains('perak')) return 'PRK';
+  if (name.contains('perlis')) return 'PLS';
+  if (name.contains('sabah')) return 'SBH';
+  if (name.contains('sarawak')) return 'SWK';
+  if (name.contains('selangor')) return 'SGR';
+  if (name.contains('terengganu')) return 'TRG';
+  if (name.contains('kuala lumpur')) return 'KUL';
+  if (name.contains('putrajaya')) return 'PJY';
+  if (name.contains('labuan')) return 'LBN';
+  return 'MYS';
 }
 
 class Achievement {

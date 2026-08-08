@@ -1,4 +1,6 @@
 abstract final class AppConfig {
+  static const demoMode = bool.fromEnvironment('DEMO_MODE');
+
   static const authCallbackUrl = 'com.mysterymalaysia://login-callback/';
 
   static const supabaseUrl = String.fromEnvironment('SUPABASE_URL');

@@ -98,7 +98,9 @@ export default {
       }] = await Promise.all([
         admin
           .from("destinations")
-          .select("id,state,latitude,longitude")
+          .select(
+            "id,name,state,city,latitude,longitude,categories,primary_type,facts",
+          )
           .in("id", destinationIds),
         admin
           .from("destination_clues")

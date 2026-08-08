@@ -6,11 +6,11 @@ import '../../controller/mission_discovery/mission_discovery_facade_interface.da
 import '../../model/mission_discovery/mission_recommendation.dart';
 import '../active_mission/active_mission_view.dart';
 import '../collaborative_travel/shared_mission_view.dart';
-import '../../theme/app_colors.dart';
-import '../../theme/app_spacing.dart';
-import '../../widgets/mission_card.dart';
-import '../../widgets/status_pill.dart';
-import '../../widgets/malaysia_loading.dart';
+import '../app_colors.dart';
+import '../app_spacing.dart';
+import '../mission_card.dart';
+import '../status_pill.dart';
+import '../malaysia_loading.dart';
 
 class RecommendationsView extends StatefulWidget {
   const RecommendationsView({
@@ -55,30 +55,78 @@ class _RecommendationsViewState extends State<RecommendationsView> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 4, 20, 40),
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Text(
-                  'Three adventures.\nZero spoilers.',
-                  style: Theme.of(context).textTheme.headlineLarge,
-                ),
+          Container(
+            padding: const EdgeInsets.all(22),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [AppColors.purple, AppColors.straits],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-              const Text('✨', style: TextStyle(fontSize: 52)),
-            ],
+              borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.purple.withValues(alpha: .22),
+                  blurRadius: 24,
+                  offset: const Offset(0, 11),
+                ),
+              ],
+            ),
+            child: Stack(
+              children: [
+                Positioned(
+                  right: -20,
+                  bottom: -28,
+                  child: Icon(
+                    Icons.auto_awesome_rounded,
+                    size: 134,
+                    color: Colors.white.withValues(alpha: .09),
+                  ),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const StatusPill(
+                      label: 'AI-curated nearby',
+                      icon: Icons.location_searching_rounded,
+                      color: AppColors.ink,
+                      background: AppColors.mango,
+                    ),
+                    const SizedBox(height: 17),
+                    Text(
+                      'Three adventures.\nZero spoilers.',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.headlineLarge?.copyWith(color: Colors.white),
+                    ),
+                    const SizedBox(height: 9),
+                    Text(
+                      'Built around RM ${widget.budgetMyr.round()} and a '
+                      '${widget.availableHours.round()}-hour travel window.',
+                      style: const TextStyle(color: Colors.white70),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 24),
           Text(
-            'Built around your RM ${widget.budgetMyr.round()} budget and '
-            '${widget.availableHours.round()}-hour travel window.',
-            style: Theme.of(context).textTheme.bodyLarge,
+            'Choose your mystery',
+            style: Theme.of(context).textTheme.titleLarge,
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 4),
+          Text(
+            'Tap a card to select it, then preview the hidden stops.',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 12),
           ...recommendations.map(
             (mission) => Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: MissionCard(
                 mission: mission,
+                selected: selected?.id == mission.id,
                 onTap: () => setState(() => selected = mission),
               ),
             ),
@@ -134,30 +182,71 @@ class _RecommendationsViewState extends State<RecommendationsView> {
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
-              Text(
-                mission.title,
-                style: Theme.of(context).textTheme.headlineLarge,
-              ),
-              const SizedBox(height: 8),
-              Text(mission.briefing),
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  StatusPill(label: mission.duration, icon: Icons.schedule),
-                  StatusPill(
-                    label: mission.budget,
-                    icon: Icons.payments_outlined,
-                    color: AppColors.green,
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(21),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(mission.colorValue), AppColors.straits],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                  StatusPill(
-                    label: mission.difficulty,
-                    icon: Icons.signal_cellular_alt_rounded,
-                    color: AppColors.hibiscus,
-                  ),
-                ],
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'YOUR MYSTERY PREVIEW',
+                      style: TextStyle(
+                        color: AppColors.mango,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                    const SizedBox(height: 9),
+                    Text(
+                      mission.title,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.headlineMedium?.copyWith(color: Colors.white),
+                    ),
+                    const SizedBox(height: 7),
+                    Text(
+                      mission.briefing,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        StatusPill(
+                          label: mission.duration,
+                          icon: Icons.schedule,
+                          color: AppColors.ink,
+                          background: Colors.white,
+                        ),
+                        StatusPill(
+                          label: mission.budget,
+                          icon: Icons.payments_outlined,
+                          color: AppColors.ink,
+                          background: AppColors.paleTeal,
+                        ),
+                        StatusPill(
+                          label: mission.difficulty,
+                          icon: Icons.signal_cellular_alt_rounded,
+                          color: AppColors.ink,
+                          background: AppColors.paleHibiscus,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 24),
               Container(
@@ -222,17 +311,44 @@ class _RecommendationsViewState extends State<RecommendationsView> {
                 Container(
                   padding: const EdgeInsets.all(15),
                   decoration: BoxDecoration(
-                    color: index.isEven
-                        ? AppColors.paleTeal
-                        : AppColors.paleHibiscus,
+                    gradient: LinearGradient(
+                      colors: [
+                        const [
+                          AppColors.paleTeal,
+                          AppColors.paleHibiscus,
+                          AppColors.paleMango,
+                        ][index % 3],
+                        Colors.white,
+                      ],
+                    ),
                     borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                    border: Border.all(
+                      color: const [
+                        AppColors.teal,
+                        AppColors.hibiscus,
+                        AppColors.mango,
+                      ][index % 3].withValues(alpha: .22),
+                    ),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       CircleAvatar(
-                        backgroundColor: Colors.white,
-                        child: Text('${index + 1}'),
+                        backgroundColor: const [
+                          AppColors.teal,
+                          AppColors.hibiscus,
+                          AppColors.mango,
+                        ][index % 3],
+                        foregroundColor: index == 2
+                            ? AppColors.ink
+                            : Colors.white,
+                        child: Icon(
+                          mysteryPreviewIcon(
+                            index < mission.stopPreviews.length
+                                ? mission.stopPreviews[index]
+                                : '',
+                          ),
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -250,6 +366,29 @@ class _RecommendationsViewState extends State<RecommendationsView> {
                               index < mission.stopPreviews.length
                                   ? mission.stopPreviews[index]
                                   : 'A hidden Malaysian experience with its own story and discovery challenge.',
+                            ),
+                            const SizedBox(height: 10),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(
+                                  Icons.access_time_filled_rounded,
+                                  size: 17,
+                                  color: AppColors.hibiscus,
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    index < mission.stopOpeningWarnings.length
+                                        ? mission.stopOpeningWarnings[index]
+                                        : 'Opening-time warning: Check current operating hours before departure.',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.ink,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),

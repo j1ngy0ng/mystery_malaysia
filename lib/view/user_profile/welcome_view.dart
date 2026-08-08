@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../../theme/app_colors.dart';
-import '../../theme/app_spacing.dart';
-import '../../widgets/app_logo.dart';
-import '../../widgets/malaysia_backdrop.dart';
-import '../../widgets/malaysia_skyline.dart';
+import '../app_colors.dart';
+import '../app_spacing.dart';
+import '../app_logo.dart';
+import '../malaysia_backdrop.dart';
+import '../malaysia_skyline.dart';
 
 class WelcomeView extends StatelessWidget {
   const WelcomeView({super.key});
@@ -26,9 +26,73 @@ class WelcomeView extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const AppLogo(),
-                      const SizedBox(height: 34),
-                      const MalaysiaSkyline(height: 235),
-                      const SizedBox(height: 30),
+                      const SizedBox(height: 26),
+                      TweenAnimationBuilder<double>(
+                        tween: Tween(begin: .94, end: 1),
+                        duration: const Duration(milliseconds: 750),
+                        curve: Curves.easeOutBack,
+                        builder: (context, value, child) =>
+                            Transform.scale(scale: value, child: child),
+                        child: Container(
+                          height: 270,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [AppColors.straits, AppColors.purple],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(
+                              AppSpacing.radiusXl,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.straits.withValues(alpha: .25),
+                                blurRadius: 30,
+                                offset: const Offset(0, 14),
+                              ),
+                            ],
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          child: Stack(
+                            children: [
+                              Positioned(
+                                left: 12,
+                                right: 12,
+                                bottom: -12,
+                                child: Opacity(
+                                  opacity: .88,
+                                  child: const MalaysiaSkyline(height: 194),
+                                ),
+                              ),
+                              const Positioned(
+                                left: 20,
+                                top: 20,
+                                child: _WelcomeTag(
+                                  icon: Icons.explore_rounded,
+                                  label: 'Tour Malaysia differently',
+                                  dark: true,
+                                ),
+                              ),
+                              const Positioned(
+                                right: 18,
+                                top: 22,
+                                child: _FloatingBadge(code: 'sbh', size: 62),
+                              ),
+                              const Positioned(
+                                right: 64,
+                                top: 83,
+                                child: _FloatingBadge(code: 'png', size: 48),
+                              ),
+                              const Positioned(
+                                right: 16,
+                                top: 130,
+                                child: _FloatingBadge(code: 'mlk', size: 42),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 28),
                       Text(
                         'Malaysia is full of secrets.',
                         style: Theme.of(context).textTheme.displaySmall,
@@ -89,10 +153,15 @@ class WelcomeView extends StatelessWidget {
 }
 
 class _WelcomeTag extends StatelessWidget {
-  const _WelcomeTag({required this.icon, required this.label});
+  const _WelcomeTag({
+    required this.icon,
+    required this.label,
+    this.dark = false,
+  });
 
   final IconData icon;
   final String label;
+  final bool dark;
 
   @override
   Widget build(BuildContext context) {
@@ -102,18 +171,62 @@ class _WelcomeTag extends StatelessWidget {
         vertical: AppSpacing.xs,
       ),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: dark ? Colors.white.withValues(alpha: .16) : Colors.white,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppColors.outline),
+        border: Border.all(
+          color: dark ? Colors.white.withValues(alpha: .28) : AppColors.outline,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: AppColors.hibiscus, size: 17),
+          Icon(
+            icon,
+            color: dark ? AppColors.mango : AppColors.hibiscus,
+            size: 17,
+          ),
           const SizedBox(width: 6),
-          Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
+          Text(
+            label,
+            style: TextStyle(
+              color: dark ? Colors.white : AppColors.ink,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
         ],
       ),
     );
   }
+}
+
+class _FloatingBadge extends StatelessWidget {
+  const _FloatingBadge({required this.code, required this.size});
+
+  final String code;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: size,
+    height: size,
+    padding: const EdgeInsets.all(2),
+    decoration: BoxDecoration(
+      shape: BoxShape.circle,
+      color: Colors.white,
+      border: Border.all(color: AppColors.mango, width: 2),
+      boxShadow: [
+        BoxShadow(
+          color: AppColors.ink.withValues(alpha: .2),
+          blurRadius: 12,
+          offset: const Offset(0, 6),
+        ),
+      ],
+    ),
+    child: ClipOval(
+      child: Image.asset(
+        'assets/images/state_badges/$code.webp',
+        fit: BoxFit.cover,
+      ),
+    ),
+  );
 }

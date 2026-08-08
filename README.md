@@ -39,7 +39,7 @@ The current build implements a bright Malaysia-tourism experience across all six
 - saved missions with Start/Resume state, active mission map, Hot & Cold
   guidance, automatic foreground arrival verification and destination reveal;
 - one canonical clue with one optional additional hint;
-- digital passport, stamps, achievements, reflections and AI diary;
+- digital passport, three-piece state mission badges, achievements, reflections and AI diary;
 - direct mission invitations, lobby, readiness and group proximity.
 
 Select **Explore the UI demo** on the welcome screen to enter the shell without
@@ -52,10 +52,10 @@ All implementation must follow [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). It 
 The UI follows facade-mediated client-side MVC. Views depend only on Facade
 interfaces; concrete Facades delegate to Controllers, and Models remain
 independent of Flutter widgets and external providers. The MVC directories
-are `lib/view`, `lib/controller`, and `lib/model`; `lib/app`, `lib/theme`, and
-`lib/widgets` contain shared Flutter support code. Facade interfaces and API
-services are kept inside `lib/controller`; Gemini is called only through a
-protected Supabase Edge Function.
+are `lib/view`, `lib/controller`, and `lib/model`. Application-shell, theme,
+and reusable-widget files are internal to `lib/view`. Facade interfaces and
+API services are kept inside `lib/controller`; Gemini is called only through
+a protected Supabase Edge Function.
 
 ## Getting Started
 

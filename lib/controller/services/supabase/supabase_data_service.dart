@@ -3,6 +3,8 @@ import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../errors/api_error.dart';
+import '../config/app_config.dart';
+import '../demo/demo_api_manager.dart';
 import '../../../model/active_mission/app_location.dart';
 import '../../../model/active_mission/destination_guide.dart';
 import '../../../model/active_mission/mission_history_item.dart';
@@ -16,6 +18,9 @@ class SupabaseDataService {
   SupabaseClient get _client => Supabase.instance.client;
 
   Future<Map<String, dynamic>> loadOwnProfile() async {
+    if (AppConfig.demoMode) {
+      return Map<String, dynamic>.from(DemoApiManager.instance.profile);
+    }
     final user = _client.auth.currentUser;
     if (user == null) {
       throw const ApiError('Sign in to load your profile.');
@@ -45,6 +50,15 @@ class SupabaseDataService {
     String? gender,
     String? phoneNumber,
   }) async {
+    if (AppConfig.demoMode) {
+      DemoApiManager.instance.updateProfile(
+        displayName: displayName,
+        username: username,
+        gender: gender,
+        phoneNumber: phoneNumber,
+      );
+      return;
+    }
     final user = _client.auth.currentUser;
     if (user == null) {
       throw const ApiError('Sign in to update your profile.');
@@ -76,6 +90,7 @@ class SupabaseDataService {
     Uint8List bytes, {
     required String extension,
   }) async {
+    if (AppConfig.demoMode) return '';
     final user = _client.auth.currentUser;
     if (user == null) throw const ApiError('Sign in to update your photo.');
     final safeExtension = extension.toLowerCase() == 'png' ? 'png' : 'jpg';
@@ -104,6 +119,9 @@ class SupabaseDataService {
   }
 
   Future<List<AppNotification>> loadNotifications({int limit = 50}) async {
+    if (AppConfig.demoMode) {
+      return DemoApiManager.instance.loadNotifications().take(limit).toList();
+    }
     final user = _client.auth.currentUser;
     if (user == null) throw const ApiError('Sign in to view notifications.');
     try {
@@ -120,6 +138,10 @@ class SupabaseDataService {
   }
 
   Future<void> markNotificationRead(String id, DateTime readAt) async {
+    if (AppConfig.demoMode) {
+      DemoApiManager.instance.markNotificationRead(id, readAt);
+      return;
+    }
     final user = _client.auth.currentUser;
     if (user == null) throw const ApiError('Sign in to update notifications.');
     try {
@@ -134,6 +156,10 @@ class SupabaseDataService {
   }
 
   Future<void> markAllNotificationsRead(DateTime readAt) async {
+    if (AppConfig.demoMode) {
+      DemoApiManager.instance.markAllNotificationsRead(readAt);
+      return;
+    }
     final user = _client.auth.currentUser;
     if (user == null) throw const ApiError('Sign in to update notifications.');
     try {
@@ -148,6 +174,9 @@ class SupabaseDataService {
   }
 
   Future<MissionLaunch> selectMission(String recommendationId) async {
+    if (AppConfig.demoMode) {
+      return DemoApiManager.instance.selectMission(recommendationId);
+    }
     _requireUser('Sign in before choosing a mission.');
     try {
       final response = await _client.functions.invoke(
@@ -163,6 +192,9 @@ class SupabaseDataService {
   }
 
   Future<MissionLaunch> startSelectedMission(String sessionId) async {
+    if (AppConfig.demoMode) {
+      return DemoApiManager.instance.startSelectedMission(sessionId);
+    }
     _requireUser('Sign in before starting a mission.');
     try {
       await _client.functions.invoke(
@@ -180,6 +212,7 @@ class SupabaseDataService {
   }
 
   Future<String> createSharedMission(String recommendationId) async {
+    if (AppConfig.demoMode) return 'demo-shared';
     _requireUser('Sign in before creating a shared mission.');
     try {
       final response = await _client.functions.invoke(
@@ -195,6 +228,9 @@ class SupabaseDataService {
   }
 
   Future<Map<String, dynamic>> sharedMission(Map<String, dynamic> body) async {
+    if (AppConfig.demoMode) {
+      return DemoApiManager.instance.sharedMission(body);
+    }
     _requireUser('Sign in to manage shared missions.');
     try {
       final response = await _client.functions.invoke(
@@ -231,6 +267,9 @@ class SupabaseDataService {
     required String sessionId,
     required AppLocation location,
   }) async {
+    if (AppConfig.demoMode) {
+      return DemoApiManager.instance.confirmArrival(sessionId, location);
+    }
     _requireUser('Sign in before confirming arrival.');
     try {
       final response = await _client.functions.invoke(
@@ -317,6 +356,12 @@ class SupabaseDataService {
     String recommendationId,
     int stopNumber,
   ) async {
+    if (AppConfig.demoMode) {
+      return DemoApiManager.instance.regenerateStop(
+        recommendationId,
+        stopNumber,
+      );
+    }
     _requireUser('Sign in before changing a mission.');
     try {
       final response = await _client.functions.invoke(
@@ -410,6 +455,9 @@ class SupabaseDataService {
   }
 
   Future<Map<String, dynamic>> _passportDiary(Map<String, dynamic> body) async {
+    if (AppConfig.demoMode) {
+      return DemoApiManager.instance.passportDiary(body);
+    }
     _requireUser('Sign in to view your passport.');
     try {
       final response = await _client.functions.invoke(
@@ -425,6 +473,9 @@ class SupabaseDataService {
   Future<Map<String, dynamic>> _missionControl(
     Map<String, dynamic> body,
   ) async {
+    if (AppConfig.demoMode) {
+      return DemoApiManager.instance.missionControl(body);
+    }
     _requireUser('Sign in to manage your mission.');
     try {
       final response = await _client.functions.invoke(

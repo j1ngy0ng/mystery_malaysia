@@ -1,9 +1,18 @@
 import 'package:geolocator/geolocator.dart';
 
 import '../../../model/active_mission/app_location.dart';
+import '../config/app_config.dart';
 
 class LocationService {
   Future<AppLocation> getCurrentLocation() async {
+    if (AppConfig.demoMode) {
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      return const AppLocation(
+        latitude: 3.16312,
+        longitude: 101.71208,
+        accuracyMetres: 8,
+      );
+    }
     if (!await Geolocator.isLocationServiceEnabled()) {
       throw const LocationServiceException(
         'Turn on device location to continue.',

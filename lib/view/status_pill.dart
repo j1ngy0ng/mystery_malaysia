@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_colors.dart';
+import 'app_colors.dart';
 
 class StatusPill extends StatelessWidget {
   const StatusPill({
@@ -23,6 +23,14 @@ class StatusPill extends StatelessWidget {
       decoration: BoxDecoration(
         color: background ?? color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: .18)),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: .07),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -37,6 +45,7 @@ class StatusPill extends StatelessWidget {
               color: color,
               fontSize: 12,
               fontWeight: FontWeight.w800,
+              letterSpacing: .05,
             ),
           ),
         ],

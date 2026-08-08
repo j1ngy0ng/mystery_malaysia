@@ -43,7 +43,7 @@ void main() {
     expect(progress.eligibleDiaryMissions.single.title, 'Lantern Trail');
   });
 
-  test('builds one mission stamp from three destination pieces', () {
+  test('builds one state mission badge from three destination pieces', () {
     const stamp = MissionStamp(
       id: 'mission-1',
       pieces: [
@@ -52,6 +52,7 @@ void main() {
           state: 'Melaka',
           emoji: '',
           earned: true,
+          missionTitle: 'The Clocktower Cipher',
         ),
         PassportStamp(
           place: 'Stop two',
@@ -70,7 +71,32 @@ void main() {
 
     expect(stamp.earnedPieces, 3);
     expect(stamp.complete, isTrue);
-    expect(stamp.name, 'Melaka Mystery Trail');
+    expect(stamp.name, 'The Clocktower Cipher');
+    expect(stamp.state, 'Melaka');
+  });
+
+  test('maps all Malaysian state mission badges to unique codes', () {
+    const states = [
+      'Johor',
+      'Kedah',
+      'Kelantan',
+      'Melaka',
+      'Negeri Sembilan',
+      'Pahang',
+      'Pulau Pinang',
+      'Perak',
+      'Perlis',
+      'Sabah',
+      'Sarawak',
+      'Selangor',
+      'Terengganu',
+      'Kuala Lumpur',
+      'Putrajaya',
+      'Labuan',
+    ];
+
+    expect(states.map(missionBadgeCode).toSet(), hasLength(16));
+    expect(missionBadgeCode('Unknown'), 'MYS');
   });
 
   test('parses crew reflections and a participant-visible shared diary', () {

@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import '../../controller/app_dependencies.dart';
 import '../../controller/mission_discovery/mission_discovery_facade_interface.dart';
 import 'recommendations_view.dart';
-import '../../theme/app_colors.dart';
-import '../../theme/app_spacing.dart';
-import '../../widgets/status_pill.dart';
-import '../../widgets/malaysia_loading.dart';
+import '../app_colors.dart';
+import '../app_spacing.dart';
+import '../status_pill.dart';
+import '../malaysia_loading.dart';
 
 class MissionBuilderView extends StatefulWidget {
   const MissionBuilderView({required this.facade, super.key});
@@ -43,33 +43,54 @@ class _MissionBuilderViewState extends State<MissionBuilderView> {
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
             children: [
               Container(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(22),
                 decoration: BoxDecoration(
-                  color: AppColors.paleTeal,
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.event_available_rounded,
-                      size: 46,
-                      color: AppColors.teal,
+                  gradient: const LinearGradient(
+                    colors: [AppColors.straits, AppColors.teal],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.teal.withValues(alpha: .22),
+                      blurRadius: 24,
+                      offset: const Offset(0, 11),
                     ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Set your journey window',
-                            style: Theme.of(context).textTheme.titleLarge,
-                          ),
-                          const SizedBox(height: 4),
-                          const Text(
-                            'Choose only when, how far and how much. Your destinations stay secret.',
-                          ),
-                        ],
+                  ],
+                ),
+                child: Stack(
+                  children: [
+                    Positioned(
+                      right: -20,
+                      bottom: -28,
+                      child: Icon(
+                        Icons.route_rounded,
+                        size: 132,
+                        color: Colors.white.withValues(alpha: .1),
                       ),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const StatusPill(
+                          label: '3 hidden stops',
+                          icon: Icons.lock_outline_rounded,
+                          color: AppColors.ink,
+                          background: AppColors.mango,
+                        ),
+                        const SizedBox(height: 18),
+                        Text(
+                          'Set your journey window',
+                          style: Theme.of(context).textTheme.headlineMedium
+                              ?.copyWith(color: Colors.white),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Choose only when, how far and how much. Your destinations stay secret.',
+                          style: TextStyle(color: Colors.white, height: 1.4),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -101,50 +122,64 @@ class _MissionBuilderViewState extends State<MissionBuilderView> {
                 ],
               ),
               const SizedBox(height: 26),
-              _FieldLabel(
+              _ConstraintSliderCard(
                 title: 'Budget',
                 value: 'Up to RM ${facade.budget.round()}',
-              ),
-              Slider(
-                value: facade.budget,
-                min: 30,
-                max: 300,
-                divisions: 18,
-                label: 'RM ${facade.budget.round()}',
-                onChanged: facade.updateBudget,
+                icon: Icons.account_balance_wallet_rounded,
+                color: AppColors.green,
+                child: Slider(
+                  value: facade.budget,
+                  min: 30,
+                  max: 300,
+                  divisions: 18,
+                  label: 'RM ${facade.budget.round()}',
+                  activeColor: AppColors.green,
+                  onChanged: facade.updateBudget,
+                ),
               ),
               const SizedBox(height: 12),
-              _FieldLabel(
+              _ConstraintSliderCard(
                 title: 'Maximum travel distance',
                 value: '${facade.maximumDistance.round()} km',
-              ),
-              Slider(
-                value: facade.maximumDistance,
-                min: 5,
-                max: 50,
-                divisions: 9,
-                label: '${facade.maximumDistance.round()} km',
-                onChanged: facade.updateMaximumDistance,
+                icon: Icons.route_rounded,
+                color: AppColors.purple,
+                child: Slider(
+                  value: facade.maximumDistance,
+                  min: 5,
+                  max: 50,
+                  divisions: 9,
+                  label: '${facade.maximumDistance.round()} km',
+                  activeColor: AppColors.purple,
+                  onChanged: facade.updateMaximumDistance,
+                ),
               ),
               const SizedBox(height: 12),
-              _FieldLabel(
+              _ConstraintSliderCard(
                 title: 'Duration',
                 value: '${facade.duration.round()} hours',
-              ),
-              Slider(
-                value: facade.duration,
-                min: 2,
-                max: 10,
-                divisions: 8,
-                label: '${facade.duration.round()}h',
-                onChanged: facade.updateDuration,
+                icon: Icons.hourglass_bottom_rounded,
+                color: AppColors.hibiscus,
+                child: Slider(
+                  value: facade.duration,
+                  min: 2,
+                  max: 10,
+                  divisions: 8,
+                  label: '${facade.duration.round()}h',
+                  activeColor: AppColors.hibiscus,
+                  onChanged: facade.updateDuration,
+                ),
               ),
               const SizedBox(height: 24),
               Container(
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
-                  color: AppColors.paleTeal,
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFECFFFA), Color(0xFFFFF8D9)],
+                  ),
                   borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                  border: Border.all(
+                    color: AppColors.teal.withValues(alpha: .14),
+                  ),
                 ),
                 child: Row(
                   children: [
@@ -348,29 +383,68 @@ class _ConstraintPicker extends StatelessWidget {
   );
 }
 
-class _FieldLabel extends StatelessWidget {
-  const _FieldLabel({required this.title, required this.value});
+class _ConstraintSliderCard extends StatelessWidget {
+  const _ConstraintSliderCard({
+    required this.title,
+    required this.value,
+    required this.icon,
+    required this.color,
+    required this.child,
+  });
 
   final String title;
   final String value;
+  final IconData icon;
+  final Color color;
+  final Widget child;
 
   @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Text(
-          title,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
-        ),
-        const Spacer(),
-        Text(
-          value,
-          style: const TextStyle(
-            color: AppColors.teal,
-            fontWeight: FontWeight.w800,
-          ),
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.fromLTRB(16, 15, 10, 7),
+    decoration: BoxDecoration(
+      color: Colors.white.withValues(alpha: .9),
+      borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+      border: Border.all(color: color.withValues(alpha: .14)),
+      boxShadow: [
+        BoxShadow(
+          color: color.withValues(alpha: .08),
+          blurRadius: 16,
+          offset: const Offset(0, 7),
         ),
       ],
-    );
-  }
+    ),
+    child: Column(
+      children: [
+        Row(
+          children: [
+            CircleAvatar(
+              radius: 18,
+              backgroundColor: color.withValues(alpha: .12),
+              foregroundColor: color,
+              child: Icon(icon, size: 19),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(fontWeight: FontWeight.w900),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: .1),
+                borderRadius: BorderRadius.circular(99),
+              ),
+              child: Text(
+                value,
+                style: TextStyle(color: color, fontWeight: FontWeight.w900),
+              ),
+            ),
+          ],
+        ),
+        child,
+      ],
+    ),
+  );
 }

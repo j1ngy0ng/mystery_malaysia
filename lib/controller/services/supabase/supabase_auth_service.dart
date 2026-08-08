@@ -6,9 +6,10 @@ import '../errors/api_error.dart';
 class SupabaseAuthService {
   SupabaseClient get _client => Supabase.instance.client;
 
-  User? get currentUser => _client.auth.currentUser;
+  User? get currentUser => AppConfig.demoMode ? null : _client.auth.currentUser;
 
   Future<bool> isEmailRegistered(String email) async {
+    if (AppConfig.demoMode) return true;
     try {
       return await _client.rpc<bool>(
         'is_email_registered',
@@ -20,6 +21,10 @@ class SupabaseAuthService {
   }
 
   Future<void> signIn({required String email, required String password}) async {
+    if (AppConfig.demoMode) {
+      await Future<void>.delayed(const Duration(milliseconds: 350));
+      return;
+    }
     try {
       await _client.auth.signInWithPassword(
         email: email.trim(),
@@ -37,6 +42,10 @@ class SupabaseAuthService {
     required String gender,
     required DateTime dateOfBirth,
   }) async {
+    if (AppConfig.demoMode) {
+      await Future<void>.delayed(const Duration(milliseconds: 450));
+      return false;
+    }
     try {
       if (await isEmailRegistered(email)) {
         throw const ApiError(
@@ -74,6 +83,7 @@ class SupabaseAuthService {
   }
 
   Future<void> sendPasswordReset(String email) async {
+    if (AppConfig.demoMode) return;
     try {
       await _client.auth.resetPasswordForEmail(
         email.trim(),
@@ -85,6 +95,7 @@ class SupabaseAuthService {
   }
 
   Future<void> updatePassword(String password) async {
+    if (AppConfig.demoMode) return;
     try {
       await _client.auth.updateUser(UserAttributes(password: password));
     } on AuthException catch (error) {
@@ -93,6 +104,7 @@ class SupabaseAuthService {
   }
 
   Future<void> signOut() async {
+    if (AppConfig.demoMode) return;
     try {
       await _client.auth.signOut();
     } on AuthException catch (error) {

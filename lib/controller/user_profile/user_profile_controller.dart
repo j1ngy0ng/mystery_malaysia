@@ -28,7 +28,7 @@ class UserProfileController extends ChangeNotifier {
   String? error;
 
   Future<void> load() async {
-    if (!AppConfig.isConfigured) return;
+    if (!AppConfig.demoMode && !AppConfig.isConfigured) return;
     isLoading = true;
     error = null;
     notifyListeners();
@@ -36,7 +36,9 @@ class UserProfileController extends ChangeNotifier {
       final data = await _dataService.loadOwnProfile();
       profile = UserProfile.fromSupabase(
         data,
-        email: _authService.currentUser?.email ?? '',
+        email: AppConfig.demoMode
+            ? 'demo@mysterymalaysia.app'
+            : _authService.currentUser?.email ?? '',
       );
     } on ApiError catch (apiError) {
       error = apiError.message;

@@ -179,7 +179,7 @@ live allocations so concurrent requests cannot exceed the stored capacity.
 
 | Table | Purpose | Key integrity rule |
 | --- | --- | --- |
-| `mission_sessions` | A selected solo or collaborative mission | One session per accepted recommendation; validated lifecycle timestamps |
+| `mission_sessions` | A selected solo or collaborative mission | One session per accepted recommendation with validated lifecycle timestamps |
 | `mission_participants` | Membership, host/member role, readiness and completion state | One participant row per user per session; one active host |
 | `user_current_missions` | Resume pointer for the dashboard | `user_id` primary key enforces one current mission |
 | `mission_stages` | Player-visible ordered stage and shared progress | Unique stage number per session; at most one active stage |
@@ -210,8 +210,8 @@ client retries or sends concurrent requests.
 
 | Table | Purpose | Key integrity rule |
 | --- | --- | --- |
-| `stamp_definitions` | One passport stamp design for each destination | `destination_id` is unique |
-| `user_stamps` | Stamps earned from verified visits | `(user_id, stamp_id)` prevents duplicate lifetime awards |
+| `stamp_definitions` | One collectible badge-piece definition for each destination | `destination_id` is unique |
+| `user_stamps` | State mission-badge pieces earned from verified visits | `(user_id, stamp_id)` prevents duplicate lifetime awards |
 | `badge_definitions` | Badge catalogue and criteria | Unique badge code |
 | `user_badges` | Badges awarded to users | `(user_id, badge_id)` prevents duplicates |
 | `xp_ledger` | Append-only XP credits and debits | Partial unique indexes prevent duplicate session or stage awards |
@@ -293,7 +293,7 @@ The Edge Functions must perform these operations transactionally:
 6. `confirm-arrival`: validate GPS accuracy and geofence, insert the verified
    visit and unlock the destination. The foreground Active Mission tracker
    invokes it automatically after proximity reports `reached`.
-7. `complete-stage`: award the destination stamp and unlock the next stage.
+7. `complete-stage`: award one of three state mission-badge pieces and unlock the next stage.
 8. `complete-mission`: finish participants/session, award badges and XP, and
    remove current-mission and temporary location rows.
 9. `generate-diary`: use only verified visits and submitted reflections, then

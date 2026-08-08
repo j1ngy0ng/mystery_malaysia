@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../controller/user_profile/user_profile_facade_interface.dart';
 import '../../model/user_profile/registration_result.dart';
-import '../../theme/app_colors.dart';
-import '../../theme/app_spacing.dart';
+import '../app_colors.dart';
+import '../app_spacing.dart';
 
 class RegisterView extends StatefulWidget {
   const RegisterView({required this.facade, super.key});
@@ -56,7 +56,7 @@ class _RegisterViewState extends State<RegisterView> {
                     const SizedBox(width: 14),
                     Expanded(
                       child: Text(
-                        'Your first stamp is waiting.',
+                        'Your first state mission badge is waiting.',
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                     ),

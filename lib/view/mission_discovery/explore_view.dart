@@ -2,8 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../../theme/app_colors.dart';
-import '../../theme/app_spacing.dart';
+import '../app_colors.dart';
+import '../app_spacing.dart';
 
 class ExploreView extends StatefulWidget {
   const ExploreView({super.key});
@@ -60,10 +60,10 @@ class _ExploreViewState extends State<ExploreView>
                 );
               },
               child: Container(
-                height: 310,
+                height: 330,
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [AppColors.purple, AppColors.straits],
+                    colors: [Color(0xFF6547DC), AppColors.straits],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -79,6 +79,30 @@ class _ExploreViewState extends State<ExploreView>
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
+                    Positioned(
+                      left: -45,
+                      bottom: -64,
+                      child: Container(
+                        width: 190,
+                        height: 190,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppColors.lagoon.withValues(alpha: .12),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      right: -38,
+                      top: -58,
+                      child: Container(
+                        width: 174,
+                        height: 174,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppColors.mango.withValues(alpha: .12),
+                        ),
+                      ),
+                    ),
                     for (final alignment in const [
                       Alignment(-.72, -.7),
                       Alignment(.72, -.62),
@@ -96,27 +120,38 @@ class _ExploreViewState extends State<ExploreView>
                     Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Container(
-                          width: 150,
-                          height: 150,
-                          decoration: BoxDecoration(
-                            color: AppColors.mango,
-                            borderRadius: BorderRadius.circular(34),
-                            border: Border.all(color: Colors.white, width: 4),
-                          ),
-                          child: const Icon(
-                            Icons.inventory_2_rounded,
-                            size: 86,
-                            color: AppColors.ink,
-                          ),
-                        ),
+                        const _MysteryChest(),
                         const SizedBox(height: 24),
-                        const Text(
-                          'Tap to open the mystery',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 19,
-                            fontWeight: FontWeight.w900,
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 18,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: .14),
+                            borderRadius: BorderRadius.circular(99),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: .22),
+                            ),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Tap to open the mystery',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                              SizedBox(width: 8),
+                              Icon(
+                                Icons.arrow_forward_rounded,
+                                color: AppColors.mango,
+                                size: 20,
+                              ),
+                            ],
                           ),
                         ),
                       ],
@@ -147,6 +182,107 @@ class _ExploreViewState extends State<ExploreView>
           ),
         ),
       ],
+    );
+  }
+}
+
+class _MysteryChest extends StatelessWidget {
+  const _MysteryChest();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 178,
+      height: 158,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Positioned(
+            bottom: 2,
+            child: Container(
+              width: 162,
+              height: 104,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [AppColors.hibiscus, Color(0xFFE43C65)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(26),
+                border: Border.all(color: Colors.white, width: 4),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: .2),
+                    blurRadius: 18,
+                    offset: const Offset(0, 12),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Positioned(
+            top: 23,
+            child: Transform.rotate(
+              angle: -.06,
+              child: Container(
+                width: 176,
+                height: 50,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFFDD62), AppColors.mango],
+                  ),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: Colors.white, width: 4),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 3,
+            child: Container(
+              width: 30,
+              height: 126,
+              decoration: BoxDecoration(
+                color: AppColors.mango,
+                border: Border.symmetric(
+                  vertical: BorderSide(
+                    color: Colors.white.withValues(alpha: .5),
+                    width: 2,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 41,
+            child: Container(
+              width: 55,
+              height: 55,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [AppColors.teal, AppColors.straits],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 4),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.ink.withValues(alpha: .2),
+                    blurRadius: 10,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.question_mark_rounded,
+                color: Colors.white,
+                size: 31,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

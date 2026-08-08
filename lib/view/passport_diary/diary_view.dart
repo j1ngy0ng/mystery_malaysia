@@ -3,9 +3,9 @@ import 'package:flutter/services.dart';
 
 import '../../controller/passport_diary/passport_diary_facade_interface.dart';
 import '../../model/passport_diary/traveller_progress.dart';
-import '../../theme/app_colors.dart';
-import '../../theme/app_spacing.dart';
-import '../../widgets/malaysia_loading.dart';
+import '../app_colors.dart';
+import '../app_spacing.dart';
+import '../malaysia_loading.dart';
 
 class DiaryView extends StatefulWidget {
   const DiaryView({required this.facade, super.key, this.sessionId});

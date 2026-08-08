@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 
 import '../controller/app_dependencies.dart';
-import '../view/active_mission/active_mission_view.dart';
-import '../view/active_mission/mission_history_view.dart';
-import '../view/clue_hint/clue_view.dart';
-import '../view/collaborative_travel/shared_mission_view.dart';
-import '../view/mission_discovery/mission_builder_view.dart';
-import '../view/mission_discovery/recommendations_view.dart';
-import '../view/passport_diary/diary_view.dart';
-import '../view/user_profile/register_view.dart';
-import '../view/user_profile/notifications_view.dart';
-import '../view/user_profile/sign_in_view.dart';
-import '../view/user_profile/update_password_view.dart';
-import '../view/user_profile/welcome_view.dart';
+import 'active_mission/active_mission_view.dart';
+import 'active_mission/mission_history_view.dart';
+import 'clue_hint/clue_view.dart';
+import 'collaborative_travel/shared_mission_view.dart';
+import 'mission_discovery/mission_builder_view.dart';
+import 'mission_discovery/recommendations_view.dart';
+import 'passport_diary/diary_view.dart';
+import 'user_profile/register_view.dart';
+import 'user_profile/notifications_view.dart';
+import 'user_profile/sign_in_view.dart';
+import 'user_profile/update_password_view.dart';
+import 'user_profile/welcome_view.dart';
 import 'app_shell.dart';
 
 abstract final class AppRouter {

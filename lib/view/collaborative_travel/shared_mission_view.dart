@@ -6,10 +6,10 @@ import '../../controller/app_dependencies.dart';
 import '../../controller/collaborative_travel/collaborative_travel_facade_interface.dart';
 import '../../model/collaborative_travel/mission_participant.dart';
 import '../active_mission/active_mission_view.dart';
-import '../../theme/app_colors.dart';
-import '../../theme/app_spacing.dart';
-import '../../widgets/status_pill.dart';
-import '../../widgets/malaysia_loading.dart';
+import '../app_colors.dart';
+import '../app_spacing.dart';
+import '../status_pill.dart';
+import '../malaysia_loading.dart';
 
 class SharedMissionView extends StatefulWidget {
   const SharedMissionView({required this.facade, super.key});

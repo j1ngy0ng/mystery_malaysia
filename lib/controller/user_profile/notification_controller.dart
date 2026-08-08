@@ -19,7 +19,7 @@ class NotificationController extends ChangeNotifier {
       notifications.where((notification) => notification.isUnread).length;
 
   Future<void> load() async {
-    if (!AppConfig.isConfigured) return;
+    if (!AppConfig.demoMode && !AppConfig.isConfigured) return;
     isLoading = true;
     error = null;
     notifyListeners();

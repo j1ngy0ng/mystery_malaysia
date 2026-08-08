@@ -1,6 +1,8 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../errors/api_error.dart';
+import '../config/app_config.dart';
+import '../demo/demo_api_manager.dart';
 import '../../../model/active_mission/app_location.dart';
 import '../../../model/mission_discovery/mission_recommendation.dart';
 
@@ -15,6 +17,10 @@ class GeminiService {
     required double maximumDistanceKm,
     required DateTime intendedStartAt,
   }) async {
+    if (AppConfig.demoMode) {
+      await Future<void>.delayed(const Duration(milliseconds: 1400));
+      return List.of(DemoApiManager.instance.recommendations);
+    }
     if (_client.auth.currentUser == null) {
       throw const ApiError('Sign in before generating a mission.');
     }

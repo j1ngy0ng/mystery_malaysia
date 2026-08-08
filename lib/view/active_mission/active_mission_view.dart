@@ -7,10 +7,10 @@ import '../../controller/active_mission/active_mission_facade_interface.dart';
 import '../../model/active_mission/destination_guide.dart';
 import '../../model/active_mission/mission_session.dart';
 import '../clue_hint/clue_view.dart';
-import '../../theme/app_colors.dart';
-import '../../theme/app_spacing.dart';
-import '../../widgets/mission_map.dart';
-import '../../widgets/status_pill.dart';
+import '../app_colors.dart';
+import '../app_spacing.dart';
+import '../mission_map.dart';
+import '../status_pill.dart';
 
 class ActiveMissionView extends StatefulWidget {
   const ActiveMissionView({required this.facade, super.key});
@@ -80,91 +80,153 @@ class _ActiveMissionViewState extends State<ActiveMissionView> {
               ListView(
                 padding: const EdgeInsets.fromLTRB(20, 4, 20, 130),
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [AppColors.straits, AppColors.purple],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.straits.withValues(alpha: .22),
+                          blurRadius: 24,
+                          offset: const Offset(0, 11),
+                        ),
+                      ],
+                    ),
+                    child: Stack(
+                      children: [
+                        Positioned(
+                          right: -18,
+                          bottom: -36,
+                          child: Icon(
+                            Icons.explore_rounded,
+                            size: 130,
+                            color: Colors.white.withValues(alpha: .08),
+                          ),
+                        ),
+                        Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            Row(
+                              children: [
+                                StatusPill(
+                                  label: ready
+                                      ? 'Ready'
+                                      : paused
+                                      ? 'Paused'
+                                      : 'Live tracking',
+                                  icon: ready
+                                      ? Icons.flag_circle_outlined
+                                      : paused
+                                      ? Icons.pause_rounded
+                                      : Icons.navigation_rounded,
+                                  color: AppColors.ink,
+                                  background: ready
+                                      ? AppColors.mango
+                                      : paused
+                                      ? AppColors.paleMango
+                                      : AppColors.lagoon,
+                                ),
+                                const Spacer(),
+                                Text(
+                                  'STOP ${session.currentStage}/${session.totalStages}',
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: .7,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 17),
                             Text(
                               session.title,
-                              style: Theme.of(context).textTheme.headlineMedium,
+                              style: Theme.of(context).textTheme.headlineMedium
+                                  ?.copyWith(color: Colors.white),
                             ),
                             const SizedBox(height: 5),
                             Text(
-                              '${session.region} • Stage ${session.currentStage} of ${session.totalStages}',
-                              style: Theme.of(context).textTheme.bodyMedium,
+                              '${session.region} • Your destination remains hidden',
+                              style: const TextStyle(color: Colors.white70),
+                            ),
+                            const SizedBox(height: 18),
+                            LinearProgressIndicator(
+                              value: session.progress,
+                              minHeight: 9,
+                              borderRadius: BorderRadius.circular(99),
+                              color: AppColors.mango,
+                              backgroundColor: Colors.white.withValues(
+                                alpha: .18,
+                              ),
                             ),
                           ],
                         ),
-                      ),
-                      StatusPill(
-                        label: ready
-                            ? 'Ready'
-                            : paused
-                            ? 'Paused'
-                            : 'Live',
-                        icon: ready
-                            ? Icons.flag_circle_outlined
-                            : paused
-                            ? Icons.pause_rounded
-                            : Icons.navigation_rounded,
-                        color: ready
-                            ? AppColors.mango
-                            : paused
-                            ? AppColors.purple
-                            : AppColors.green,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  LinearProgressIndicator(
-                    value: session.progress,
-                    minHeight: 9,
-                    borderRadius: BorderRadius.circular(99),
-                    color: AppColors.hibiscus,
-                    backgroundColor: AppColors.paleHibiscus,
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 20),
-                  Stack(
-                    children: [
-                      MissionMap(
-                        currentLocation: facade.currentLocation,
-                        height: 290,
+                  Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [AppColors.mango, AppColors.teal],
                       ),
-                      Positioned(
-                        left: 14,
-                        right: 14,
-                        top: 14,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 10,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: .94),
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.near_me_rounded,
-                                color: AppColors.straits,
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  facade.mapStatus,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w800,
+                      borderRadius: BorderRadius.circular(
+                        AppSpacing.radiusLg + 3,
+                      ),
+                    ),
+                    child: Stack(
+                      children: [
+                        MissionMap(
+                          currentLocation: facade.currentLocation,
+                          height: 290,
+                        ),
+                        Positioned(
+                          left: 14,
+                          right: 14,
+                          top: 14,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: .94),
+                              borderRadius: BorderRadius.circular(18),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.ink.withValues(alpha: .1),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 5),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.near_me_rounded,
+                                  color: AppColors.straits,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    facade.mapStatus,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                   if (facade.locationError != null) ...[
                     const SizedBox(height: 12),
@@ -473,32 +535,114 @@ class _DestinationGuideSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 22),
-          const Icon(
-            Icons.celebration_rounded,
-            size: 58,
-            color: AppColors.mango,
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Destination revealed!',
-            style: Theme.of(context).textTheme.headlineMedium,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            guide.name,
-            style: Theme.of(context).textTheme.titleLarge,
-            textAlign: TextAlign.center,
+          Container(
+            padding: const EdgeInsets.all(22),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [AppColors.teal, AppColors.straits],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.teal.withValues(alpha: .24),
+                  blurRadius: 24,
+                  offset: const Offset(0, 11),
+                ),
+              ],
+            ),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Positioned(
+                  right: -24,
+                  top: -25,
+                  child: Icon(
+                    Icons.local_florist_rounded,
+                    color: Colors.white.withValues(alpha: .1),
+                    size: 120,
+                  ),
+                ),
+                Column(
+                  children: [
+                    Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        color: AppColors.mango,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 4),
+                      ),
+                      child: const Icon(
+                        Icons.celebration_rounded,
+                        size: 34,
+                        color: AppColors.ink,
+                      ),
+                    ),
+                    const SizedBox(height: 13),
+                    const Text(
+                      'DESTINATION REVEALED',
+                      style: TextStyle(
+                        color: AppColors.mango,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.1,
+                      ),
+                    ),
+                    const SizedBox(height: 7),
+                    Text(
+                      guide.name,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.headlineMedium?.copyWith(color: Colors.white),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.location_on_rounded,
+                          color: Colors.white70,
+                          size: 17,
+                        ),
+                        const SizedBox(width: 5),
+                        Flexible(
+                          child: Text(
+                            [
+                              guide.city,
+                              guide.state,
+                            ].where((text) => text.isNotEmpty).join(', '),
+                            style: const TextStyle(color: Colors.white70),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
           if (guide.imageUrl != null) ...[
-            const SizedBox(height: 14),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-              child: Image.network(
-                guide.imageUrl!,
-                height: 210,
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => const SizedBox.shrink(),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [AppColors.mango, AppColors.hibiscus],
+                ),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusLg + 3),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                child: Image.network(
+                  guide.imageUrl!,
+                  height: 210,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                ),
               ),
             ),
             if (guide.photoAttributions.isNotEmpty)
@@ -508,15 +652,6 @@ class _DestinationGuideSheet extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
           ],
-          const SizedBox(height: 6),
-          Text(
-            [
-              guide.city,
-              guide.state,
-            ].where((text) => text.isNotEmpty).join(', '),
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
           const SizedBox(height: 16),
           Wrap(
             alignment: WrapAlignment.center,
@@ -529,7 +664,7 @@ class _DestinationGuideSheet extends StatelessWidget {
                 color: AppColors.green,
               ),
               const StatusPill(
-                label: 'Stamp collected',
+                label: 'Badge piece collected',
                 icon: Icons.approval_rounded,
                 color: AppColors.hibiscus,
               ),
@@ -698,13 +833,26 @@ class _GuideSection extends StatelessWidget {
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+        border: Border.all(color: AppColors.ink.withValues(alpha: .06)),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.ink.withValues(alpha: .06),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(icon),
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: Colors.white.withValues(alpha: .72),
+                foregroundColor: AppColors.ink,
+                child: Icon(icon, size: 19),
+              ),
               const SizedBox(width: 9),
               Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
             ],
@@ -806,36 +954,68 @@ class _TrailStep extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 20,
-            backgroundColor: completed
-                ? AppColors.green
-                : active
+      child: Container(
+        padding: const EdgeInsets.all(13),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: active
+                ? [AppColors.paleMango, Colors.white]
+                : completed
+                ? [AppColors.paleTeal, Colors.white]
+                : [Colors.white, AppColors.outline.withValues(alpha: .3)],
+          ),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+          border: Border.all(
+            color: active
                 ? AppColors.mango
+                : completed
+                ? AppColors.teal.withValues(alpha: .25)
                 : AppColors.outline,
-            child: completed
-                ? const Icon(Icons.check, color: Colors.white)
-                : Text(
-                    number,
+          ),
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 22,
+              backgroundColor: completed
+                  ? AppColors.green
+                  : active
+                  ? AppColors.mango
+                  : AppColors.outline,
+              child: completed
+                  ? const Icon(Icons.check, color: Colors.white)
+                  : Text(
+                      number,
+                      style: const TextStyle(fontWeight: FontWeight.w900),
+                    ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
                     style: const TextStyle(fontWeight: FontWeight.w900),
                   ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(fontWeight: FontWeight.w800),
-                ),
-                Text(subtitle, style: Theme.of(context).textTheme.bodyMedium),
-              ],
+                  Text(subtitle, style: Theme.of(context).textTheme.bodyMedium),
+                ],
+              ),
             ),
-          ),
-        ],
+            Icon(
+              completed
+                  ? Icons.verified_rounded
+                  : active
+                  ? Icons.near_me_rounded
+                  : Icons.lock_outline_rounded,
+              color: completed
+                  ? AppColors.green
+                  : active
+                  ? AppColors.hibiscus
+                  : AppColors.secondaryText,
+            ),
+          ],
+        ),
       ),
     );
   }

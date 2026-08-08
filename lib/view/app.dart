@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:app_links/app_links.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../theme/app_theme.dart';
-import 'router.dart';
+import 'app_router.dart';
+import 'app_theme.dart';
+import 'malaysia_backdrop.dart';
+import '../controller/services/config/app_config.dart';
 
 class MysteryMalaysiaApp extends StatefulWidget {
   const MysteryMalaysiaApp({
@@ -29,14 +31,16 @@ class _MysteryMalaysiaAppState extends State<MysteryMalaysiaApp> {
   @override
   void initState() {
     super.initState();
-    linkSubscription = AppLinks().uriLinkStream.listen((uri) {
-      if (uri.host != 'mission-invite') return;
-      final signedIn = Supabase.instance.client.auth.currentSession != null;
-      navigatorKey.currentState?.pushNamedAndRemoveUntil(
-        signedIn ? '/home' : '/auth/register',
-        (_) => false,
-      );
-    });
+    if (!AppConfig.demoMode) {
+      linkSubscription = AppLinks().uriLinkStream.listen((uri) {
+        if (uri.host != 'mission-invite') return;
+        final signedIn = Supabase.instance.client.auth.currentSession != null;
+        navigatorKey.currentState?.pushNamedAndRemoveUntil(
+          signedIn ? '/home' : '/auth/register',
+          (_) => false,
+        );
+      });
+    }
     authSubscription = widget.authStateChanges?.listen((authState) {
       if (authState.event == AuthChangeEvent.passwordRecovery) {
         navigatorKey.currentState?.pushNamedAndRemoveUntil(
@@ -67,6 +71,7 @@ class _MysteryMalaysiaAppState extends State<MysteryMalaysiaApp> {
       title: 'Mystery Malaysia',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.bright,
+      builder: (context, child) => MalaysiaBackdrop(child: child!),
       initialRoute: widget.initialRoute,
       onGenerateRoute: AppRouter.onGenerateRoute,
     );

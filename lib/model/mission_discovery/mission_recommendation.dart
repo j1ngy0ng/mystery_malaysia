@@ -12,6 +12,7 @@ class MissionRecommendation {
     required this.iconKey,
     this.durationMinutes = 0,
     this.stopPreviews = const [],
+    this.stopOpeningWarnings = const [],
   });
 
   final String? id;
@@ -26,6 +27,7 @@ class MissionRecommendation {
   final String iconKey;
   final int durationMinutes;
   final List<String> stopPreviews;
+  final List<String> stopOpeningWarnings;
 
   factory MissionRecommendation.fromJson(Map<String, dynamic> json) {
     final durationMinutes =
@@ -54,11 +56,7 @@ class MissionRecommendation {
         0xFF12B8A6,
         0xFFFFBF3F,
       ][(rank - 1).clamp(0, 2)],
-      iconKey: switch (rank) {
-        2 => 'forest',
-        3 => 'food',
-        _ => 'lantern',
-      },
+      iconKey: json['icon_key'] as String? ?? 'explore',
       durationMinutes: durationMinutes,
       stopPreviews:
           (json['stop_previews'] as List?)?.whereType<String>().toList() ??
@@ -67,6 +65,11 @@ class MissionRecommendation {
             (index) =>
                 'A hidden Malaysian experience with its own atmosphere, story and discovery challenge.',
           ),
+      stopOpeningWarnings:
+          (json['stop_opening_warnings'] as List?)
+              ?.whereType<String>()
+              .toList() ??
+          const [],
     );
   }
 }

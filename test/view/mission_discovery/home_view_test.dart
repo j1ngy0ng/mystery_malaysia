@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mystery_malaysia/app/app.dart';
+import 'package:mystery_malaysia/view/app.dart';
 import 'package:mystery_malaysia/controller/active_mission/active_mission_facade_interface.dart';
 import 'package:mystery_malaysia/controller/user_profile/user_profile_facade_interface.dart';
 import 'package:mystery_malaysia/model/active_mission/mission_session.dart';
 import 'package:mystery_malaysia/model/user_profile/user_profile.dart';
 import 'package:mystery_malaysia/view/mission_discovery/home_view.dart';
-import 'package:mystery_malaysia/theme/app_theme.dart';
+import 'package:mystery_malaysia/view/app_theme.dart';
 
 void main() {
   testWidgets('shows the mission discovery entry point', (tester) async {

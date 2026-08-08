@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../model/active_mission/app_location.dart';
-import '../theme/app_colors.dart';
+import '../controller/services/config/app_config.dart';
+import 'app_colors.dart';
 
 class MissionMap extends StatefulWidget {
   const MissionMap({
@@ -46,6 +47,14 @@ class _MissionMapState extends State<MissionMap> {
       return _LocationLoadingMap(
         height: widget.height,
         borderRadius: widget.borderRadius,
+      );
+    }
+    if (AppConfig.demoMode) {
+      return _DemoLocationMap(
+        height: widget.height,
+        borderRadius: widget.borderRadius,
+        interactive: widget.interactive,
+        onTap: () => _openInteractiveMap(context),
       );
     }
     final currentPoint = LatLng(current.latitude, current.longitude);
@@ -125,6 +134,99 @@ class _MissionMapState extends State<MissionMap> {
       CameraUpdate.newLatLngZoom(currentPoint, 16),
     );
   }
+}
+
+class _DemoLocationMap extends StatelessWidget {
+  const _DemoLocationMap({
+    required this.height,
+    required this.borderRadius,
+    required this.interactive,
+    required this.onTap,
+  });
+
+  final double height;
+  final double borderRadius;
+  final bool interactive;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => ClipRRect(
+    borderRadius: BorderRadius.circular(borderRadius),
+    child: GestureDetector(
+      onTap: interactive ? null : onTap,
+      child: SizedBox(
+        height: height,
+        width: double.infinity,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            CustomPaint(painter: _DemoMapPainter()),
+            const Center(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Color(0x3348B9F2),
+                ),
+                child: Padding(
+                  padding: EdgeInsets.all(13),
+                  child: CircleAvatar(
+                    radius: 10,
+                    backgroundColor: AppColors.sky,
+                    child: CircleAvatar(
+                      radius: 4,
+                      backgroundColor: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              left: 12,
+              top: 12,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.all(Radius.circular(99)),
+                ),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  child: Text(
+                    'UI demo • your location only',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+class _DemoMapPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawColor(const Color(0xFFDDF2E4), BlendMode.src);
+    final road = Paint()
+      ..color = Colors.white
+      ..strokeWidth = 12
+      ..strokeCap = StrokeCap.round;
+    final lane = Paint()
+      ..color = const Color(0xFFB7DCC8)
+      ..strokeWidth = 4;
+    for (var index = 0; index < 5; index++) {
+      final y = 45.0 + index * size.height / 5.7;
+      canvas.drawLine(Offset(-10, y), Offset(size.width + 10, y - 28), road);
+    }
+    for (var index = 0; index < 5; index++) {
+      final x = 28.0 + index * size.width / 4.5;
+      canvas.drawLine(Offset(x, -10), Offset(x - 34, size.height + 10), lane);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _LocationLoadingMap extends StatelessWidget {

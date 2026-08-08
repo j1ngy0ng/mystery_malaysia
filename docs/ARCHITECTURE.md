@@ -263,15 +263,20 @@ Rules:
 
 ## 4. Required repository organization
 
-The MVC architecture folders are `view`, `controller`, and `model`. The `app`, `theme`, and `widgets` folders are supporting Flutter source folders at the same filesystem level; they are not MVC components and are intentionally omitted from the component diagram.
+The MVC architecture folders are `view`, `controller`, and `model`. Application-shell, theme, and reusable-widget files are internal implementation details of the View layer, so they do not add components to the submitted architecture diagram.
 
 ```text
 lib/
 |-- main.dart
-|-- app/                             # application widget, router and shell
-|-- theme/                           # colours, spacing, typography and Material theme
-|-- widgets/                         # reusable Flutter widgets
 |-- view/
+|   |-- app.dart                     # application widget
+|   |-- app_router.dart              # application routes
+|   |-- app_shell.dart               # bottom navigation shell
+|   |-- app_theme.dart               # Material theme
+|   |-- app_colors.dart              # shared presentation colours
+|   |-- app_spacing.dart             # shared presentation spacing
+|   |-- app_typography.dart          # shared presentation typography
+|   |-- *.dart                       # reusable presentation widgets
 |   |-- user_profile/
 |   |-- mission_discovery/
 |   |-- active_mission/
@@ -310,7 +315,7 @@ The facade interface for each module remains inside that module's `controller` d
 | User and Profile | onboarding, authentication, account recovery and profile |
 | Mission Discovery | home discovery entry, request constraints, AI recommendations, mission preview, search |
 | Active Mission | start, pause, resume, abandon, map, proximity, arrival, mission progress and completion |
-| Passport and Diary | stamps, XP, badges, progression, history, reflections and generated diaries |
+| Passport and Diary | three-piece state mission badges, progression, history, reflections and generated diaries |
 | Clue and Hint | clue formats, answers, hint levels, hint costs and clue progress |
 | Collaborative Travel | direct invitations, lobby, participant status, team gameplay and shared diary |
 

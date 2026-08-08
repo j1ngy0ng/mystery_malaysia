@@ -14,15 +14,25 @@ void main() {
       'recommendation_rank': 1,
       'stops': 3,
       'stop_previews': [
-        'A heritage-focused stop.',
-        'A green outdoor stop.',
-        'A local craft stop.',
+        'Decode civic stories through a collection shaped by local history.',
+        'Follow a shaded wetland trail where migratory birds define the experience.',
+        'Watch traditional metalwork techniques take form in a living craft space.',
+      ],
+      'stop_opening_warnings': [
+        'Opening-time warning: Monday: 9:00 AM–5:00 PM.',
+        'Opening-time warning: Complete this outdoor stop in daylight.',
+        'Opening-time warning: Published hours are unavailable.',
       ],
     });
 
     expect(mission.duration, '3h 30m');
     expect(mission.difficulty, 'Moderate');
     expect(mission.stopPreviews, hasLength(3));
+    expect(mission.stopOpeningWarnings, hasLength(3));
+    expect(
+      mission.stopOpeningWarnings,
+      everyElement(startsWith('Opening-time warning:')),
+    );
     expect(mission.stopPreviews.join(' '), isNot(contains('destination name')));
   });
 }

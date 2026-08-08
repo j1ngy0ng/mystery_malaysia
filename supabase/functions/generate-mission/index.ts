@@ -2,6 +2,10 @@ import { withSupabase } from "npm:@supabase/server@1.4.1";
 import {
   isLogicalTouristDestination,
 } from "../_shared/destination-policy.ts";
+import {
+  openingTimeWarning,
+  stopPreview,
+} from "../_shared/stop-preview.ts";
 
 const STOPS_PER_MISSION = 3;
 const MISSION_OPTIONS = 3;
@@ -33,6 +37,10 @@ type DestinationCandidate = {
   google_user_rating_count: number | null;
   safety_score: number | null;
   discovery_score: number | null;
+  primary_type: string | null;
+  opening_hours: Record<string, unknown>;
+  facts: unknown;
+  daylight_only: boolean;
   capacity_per_slot: number;
   selection_score: number;
   distance_km: number;
@@ -359,7 +367,18 @@ export default {
           tags: saved.tags,
           recommendation_rank: saved.recommendation_rank,
           stops: destination_ids.length,
-          stop_previews: buildStopPreviews(destination_ids, candidates),
+          stop_previews: destination_ids.map((id, stopIndex) =>
+            stopPreview(
+              candidates.find((candidate) => candidate.id === id),
+              stopIndex,
+            )
+          ),
+          stop_opening_warnings: destination_ids.map((id) =>
+            openingTimeWarning(
+              candidates.find((candidate) => candidate.id === id),
+              input.intended_start_at,
+            )
+          ),
         });
       }
 
@@ -430,34 +449,6 @@ async function expireOldReservations(admin: any): Promise<void> {
     .eq("status", "reserved")
     .lt("expires_at", new Date().toISOString());
   if (error) throw error;
-}
-
-function buildStopPreviews(
-  destinationIds: string[],
-  candidates: DestinationCandidate[],
-): string[] {
-  const labels: Record<string, string> = {
-    culture: "local culture",
-    history: "heritage stories",
-    nature: "nature and scenery",
-    food: "local flavours",
-    museum: "curated discoveries",
-    park: "an outdoor escape",
-    architecture: "distinctive architecture",
-  };
-  return destinationIds.map((id) => {
-    const destination = candidates.find((candidate) => candidate.id === id);
-    const themes = (destination?.categories ?? [])
-      .map((category) => labels[category.toLowerCase()] ?? category.toLowerCase())
-      .filter(Boolean)
-      .slice(0, 2);
-    const focus = themes.length ? themes.join(" and ") : "a local hidden gem";
-    const minutes = Math.max(
-      30,
-      Number(destination?.estimated_duration_minutes ?? 60),
-    );
-    return `Expect ${focus} in a roughly ${minutes}-minute mystery stop. The exact place remains hidden until arrival.`;
-  });
 }
 
 async function loadUserDestinationHistory(
@@ -981,7 +972,7 @@ async function cacheEligiblePlaces({
       "id,external_place_id,name,state,city,latitude,longitude,categories," +
         "estimated_budget_myr,estimated_duration_minutes,google_maps_uri," +
         "google_rating,google_user_rating_count,safety_score,discovery_score," +
-        "capacity_per_slot",
+        "capacity_per_slot,primary_type,opening_hours,facts,daylight_only",
     );
   if (upsertError) throw upsertError;
 
@@ -1053,6 +1044,7 @@ async function loadCuratedCandidates({
         "estimated_budget_myr,estimated_duration_minutes,google_maps_uri," +
         "google_rating,google_user_rating_count,safety_score,discovery_score," +
         "capacity_per_slot,safety_status,primary_type,source_metadata," +
+        "opening_hours,facts,daylight_only," +
         "destination_clues!inner(destination_id)",
     )
     .eq("active", true)

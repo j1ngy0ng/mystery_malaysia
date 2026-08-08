@@ -1,4 +1,8 @@
 import { withSupabase } from "npm:@supabase/server@1.4.1";
+import {
+  openingTimeWarning,
+  stopPreview,
+} from "../_shared/stop-preview.ts";
 
 type Input = { recommendation_id?: string; stop_number?: number };
 
@@ -60,8 +64,9 @@ export default {
       const { data: destinations, error: destinationsError } = await admin
         .from("destinations")
         .select(
-          "id,latitude,longitude,categories,estimated_budget_myr," +
-            "estimated_duration_minutes,discovery_score,safety_score,capacity_per_slot",
+          "id,name,state,city,latitude,longitude,categories,primary_type," +
+            "estimated_budget_myr,estimated_duration_minutes,opening_hours," +
+            "facts,daylight_only,discovery_score,safety_score,capacity_per_slot",
         )
         .eq("active", true)
         .in("safety_status", ["automated_review", "curated"])
@@ -144,7 +149,10 @@ export default {
           : row.destination_id
       );
       const { data: route } = await admin.from("destinations")
-        .select("id,categories,estimated_budget_myr,estimated_duration_minutes")
+        .select(
+          "id,name,state,city,categories,primary_type,estimated_budget_myr," +
+            "estimated_duration_minutes,opening_hours,facts,daylight_only",
+        )
         .in("id", allIds);
       const duration = (route ?? []).reduce(
         (total, row) => total + Number(row.estimated_duration_minutes ?? 60),
@@ -196,18 +204,16 @@ export default {
           difficulty: saved.difficulty,
           recommendation_rank: saved.recommendation_rank,
           stops: 3,
-          stop_previews: allIds.map((id) => {
+          stop_previews: allIds.map((id, stopIndex) => {
             const destination = (route ?? []).find((row: any) => row.id === id);
-            const themes = (destination?.categories ?? []).slice(0, 2)
-              .map((category: string) => category.toLowerCase());
-            const focus = themes.length
-              ? themes.join(" and ")
-              : "a local hidden gem";
-            const minutes = Math.max(
-              30,
-              Number(destination?.estimated_duration_minutes ?? 60),
+            return stopPreview(destination, stopIndex);
+          }),
+          stop_opening_warnings: allIds.map((id) => {
+            const destination = (route ?? []).find((row: any) => row.id === id);
+            return openingTimeWarning(
+              destination,
+              missionRequest.intended_start_at,
             );
-            return `Expect ${focus} in a roughly ${minutes}-minute mystery stop. The exact place remains hidden until arrival.`;
           }),
         },
       });

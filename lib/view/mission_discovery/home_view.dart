@@ -5,12 +5,12 @@ import '../../controller/active_mission/active_mission_facade_interface.dart';
 import '../../controller/user_profile/user_profile_facade_interface.dart';
 import '../../model/active_mission/mission_session.dart';
 import '../active_mission/active_mission_view.dart';
-import '../../theme/app_colors.dart';
-import '../../theme/app_spacing.dart';
-import '../../widgets/app_logo.dart';
-import '../../widgets/malaysia_backdrop.dart';
-import '../../widgets/section_header.dart';
-import '../../widgets/status_pill.dart';
+import '../app_colors.dart';
+import '../app_spacing.dart';
+import '../app_logo.dart';
+import '../malaysia_backdrop.dart';
+import '../section_header.dart';
+import '../status_pill.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({
@@ -239,16 +239,9 @@ class _DiscoveryHero extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          Positioned(
-            right: -14,
-            top: -10,
-            child: Transform.rotate(
-              angle: .16,
-              child: const Text('🗺️', style: TextStyle(fontSize: 90)),
-            ),
-          ),
+          Positioned(right: -6, top: -3, child: const _BadgeTrail()),
           ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 255),
+            constraints: const BoxConstraints(maxWidth: 238),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -283,6 +276,57 @@ class _DiscoveryHero extends StatelessWidget {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BadgeTrail extends StatelessWidget {
+  const _BadgeTrail();
+
+  @override
+  Widget build(BuildContext context) {
+    const badges = ['png', 'sbh', 'mlk'];
+    return SizedBox(
+      width: 92,
+      height: 116,
+      child: Stack(
+        children: [
+          for (var index = 0; index < badges.length; index++)
+            Positioned(
+              top: index * 25,
+              right: index.isEven ? 0 : 29,
+              child: Transform.rotate(
+                angle: index.isEven ? .08 : -.1,
+                child: Container(
+                  width: 58,
+                  height: 58,
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: AppColors.mango.withValues(alpha: .9),
+                      width: 2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.ink.withValues(alpha: .2),
+                        blurRadius: 10,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: ClipOval(
+                    child: Image.asset(
+                      'assets/images/state_badges/${badges[index]}.webp',
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );

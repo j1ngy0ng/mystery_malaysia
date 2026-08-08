@@ -2,10 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'controller/services/config/app_config.dart';
-import 'app/app.dart';
+import 'view/app.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  if (AppConfig.demoMode) {
+    runApp(const MysteryMalaysiaApp(initialRoute: '/home'));
+    return;
+  }
 
   if (!AppConfig.isConfigured) {
     runApp(const _ConfigurationRequiredApp());

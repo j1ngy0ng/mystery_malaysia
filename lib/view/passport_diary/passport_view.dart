@@ -4,10 +4,10 @@ import 'package:flutter/material.dart';
 
 import '../../controller/passport_diary/passport_diary_facade_interface.dart';
 import '../../model/passport_diary/traveller_progress.dart';
-import '../../theme/app_colors.dart';
-import '../../theme/app_spacing.dart';
-import '../../widgets/section_header.dart';
-import '../../widgets/malaysia_loading.dart';
+import '../app_colors.dart';
+import '../app_spacing.dart';
+import '../section_header.dart';
+import '../malaysia_loading.dart';
 
 class PassportView extends StatefulWidget {
   const PassportView({required this.facade, super.key});
@@ -77,11 +77,11 @@ class _PassportViewState extends State<PassportView> {
                 ),
               ),
             ),
-          SectionHeader(
-            title: 'Your stamps',
-            action:
-                '${facade.stamps.length} pieces · ${facade.missionStamps.where((stamp) => stamp.complete).length} complete',
-            onAction: () {},
+          const SectionHeader(title: 'Mission badges'),
+          const SizedBox(height: 4),
+          Text(
+            '${facade.stamps.length} pieces · ${facade.missionStamps.where((stamp) => stamp.complete).length} complete',
+            style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: 10),
           GridView.builder(
@@ -101,7 +101,7 @@ class _PassportViewState extends State<PassportView> {
           ),
           if (!facade.isLoading && facade.stamps.isEmpty)
             const Text(
-              'No stamps yet. Each successful GPS arrival verification awards one immediately.',
+              'No mission badges yet. Each GPS-verified destination adds one of three state badge pieces.',
             ),
           const SizedBox(height: 28),
           const SectionHeader(title: 'Achievements'),
@@ -226,29 +226,45 @@ class _PassportViewState extends State<PassportView> {
   void _showStamp(MissionStamp stamp) {
     showModalBottomSheet<void>(
       context: context,
-      builder: (context) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _MissionStampEmblem(stamp: stamp, size: 112),
-            const SizedBox(height: 12),
-            Text(stamp.name, style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 8),
-            Text('${stamp.earnedPieces}/3 destination pieces collected'),
-            const SizedBox(height: 14),
-            for (var index = 0; index < stamp.pieces.length; index++)
-              ListTile(
-                dense: true,
-                leading: CircleAvatar(child: Text('${index + 1}')),
-                title: Text(stamp.pieces[index].place),
-                subtitle: Text(stamp.pieces[index].state),
-                trailing: const Icon(
-                  Icons.verified_rounded,
-                  color: AppColors.green,
+      isScrollControlled: true,
+      builder: (context) => SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _MissionStampEmblem(stamp: stamp, size: 112),
+              const SizedBox(height: 12),
+              Text(
+                stamp.name,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 8),
+              Text('${stamp.earnedPieces}/3 destination pieces collected'),
+              const SizedBox(height: 8),
+              Text(
+                '${stamp.state} mission badge',
+                style: const TextStyle(
+                  color: AppColors.teal,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
-          ],
+              const SizedBox(height: 14),
+              for (var index = 0; index < stamp.pieces.length; index++)
+                ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  leading: CircleAvatar(child: Text('${index + 1}')),
+                  title: Text(stamp.pieces[index].place),
+                  subtitle: Text(stamp.pieces[index].state),
+                  trailing: const Icon(
+                    Icons.verified_rounded,
+                    color: AppColors.green,
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -283,18 +299,21 @@ class _MissionStampCard extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _MissionStampEmblem(stamp: stamp, size: 82),
+              _MissionStampEmblem(stamp: stamp, size: 78),
               const SizedBox(height: 7),
-              const SizedBox(height: 7),
-              Text(
-                stamp.place,
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
+              Flexible(
+                child: Text(
+                  stamp.place,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                textAlign: TextAlign.center,
-                maxLines: 2,
               ),
+              const SizedBox(height: 3),
               Text(
                 '${stamp.earnedPieces}/3 pieces',
                 style: const TextStyle(
@@ -317,44 +336,49 @@ class _MissionStampEmblem extends StatelessWidget {
   final MissionStamp stamp;
   final double size;
 
-  static const icons = [
-    Icons.local_florist_rounded,
-    Icons.temple_buddhist_rounded,
-    Icons.hiking_rounded,
-    Icons.museum_rounded,
-    Icons.park_rounded,
-    Icons.storefront_rounded,
-  ];
-
   @override
   Widget build(BuildContext context) {
-    final seed = _stableSeed(stamp.id);
+    final code = missionBadgeCode(stamp.state);
+    final asset = code == 'MYS'
+        ? 'assets/images/mystery_malaysia_logo-v2.png'
+        : 'assets/images/state_badges/${code.toLowerCase()}.webp';
     return SizedBox.square(
       dimension: size,
       child: Stack(
         alignment: Alignment.center,
         children: [
-          CustomPaint(
-            size: Size.square(size),
-            painter: _StampPiecesPainter(
-              missionSeed: seed,
-              pieceSeeds: stamp.pieces
-                  .take(3)
-                  .map((piece) => _stableSeed(piece.place))
-                  .toList(growable: false),
+          ClipOval(
+            child: Image.asset(
+              asset,
+              width: size,
+              height: size,
+              fit: BoxFit.cover,
             ),
           ),
-          Container(
-            width: size * .43,
-            height: size * .43,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: .92),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              icons[seed % icons.length],
-              size: size * .25,
-              color: AppColors.ink,
+          CustomPaint(
+            size: Size.square(size),
+            painter: _StateBadgePiecesPainter(stamp.earnedPieces),
+          ),
+          Positioned(
+            bottom: size * .05,
+            child: Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: size * .08,
+                vertical: size * .02,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.ink.withValues(alpha: .82),
+                borderRadius: BorderRadius.circular(99),
+              ),
+              child: Text(
+                code,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: size * .08,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: .5,
+                ),
+              ),
             ),
           ),
         ],
@@ -363,40 +387,29 @@ class _MissionStampEmblem extends StatelessWidget {
   }
 }
 
-class _StampPiecesPainter extends CustomPainter {
-  const _StampPiecesPainter({
-    required this.missionSeed,
-    required this.pieceSeeds,
-  });
+class _StateBadgePiecesPainter extends CustomPainter {
+  const _StateBadgePiecesPainter(this.earnedPieces);
 
-  final int missionSeed;
-  final List<int> pieceSeeds;
-
-  static const colors = [
-    AppColors.hibiscus,
-    AppColors.mango,
-    AppColors.teal,
-    AppColors.purple,
-    AppColors.green,
-    AppColors.straits,
-  ];
+  final int earnedPieces;
 
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
-    final fill = Paint()..style = PaintingStyle.fill;
     const sweep = math.pi * 2 / 3;
-    for (var index = 0; index < 3; index++) {
-      fill.color = index < pieceSeeds.length
-          ? colors[pieceSeeds[index] % colors.length]
-          : AppColors.outline;
-      canvas.drawArc(rect, -math.pi / 2 + index * sweep, sweep, true, fill);
+    for (var index = earnedPieces; index < 3; index++) {
+      canvas.drawArc(
+        rect,
+        -math.pi / 2 + index * sweep,
+        sweep,
+        true,
+        Paint()..color = AppColors.outline.withValues(alpha: .93),
+      );
     }
     canvas.drawCircle(
       size.center(Offset.zero),
       size.shortestSide / 2 - 1,
       Paint()
-        ..color = colors[missionSeed % colors.length]
+        ..color = AppColors.mango
         ..style = PaintingStyle.stroke
         ..strokeWidth = 3,
     );
@@ -416,9 +429,8 @@ class _StampPiecesPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _StampPiecesPainter oldDelegate) =>
-      oldDelegate.missionSeed != missionSeed ||
-      oldDelegate.pieceSeeds.join(',') != pieceSeeds.join(',');
+  bool shouldRepaint(covariant _StateBadgePiecesPainter oldDelegate) =>
+      oldDelegate.earnedPieces != earnedPieces;
 }
 
 int _stableSeed(String value) =>

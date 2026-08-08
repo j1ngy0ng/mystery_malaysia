@@ -4,10 +4,10 @@ import '../../controller/app_dependencies.dart';
 import '../../controller/active_mission/active_mission_facade_interface.dart';
 import '../../model/active_mission/mission_history_item.dart';
 import '../../model/active_mission/mission_session.dart';
-import '../../theme/app_colors.dart';
-import '../../theme/app_spacing.dart';
-import '../../widgets/status_pill.dart';
-import '../../widgets/malaysia_loading.dart';
+import '../app_colors.dart';
+import '../app_spacing.dart';
+import '../status_pill.dart';
+import '../malaysia_loading.dart';
 import 'active_mission_view.dart';
 import '../collaborative_travel/shared_mission_view.dart';
 
@@ -45,16 +45,60 @@ class _MissionHistoryViewState extends State<MissionHistoryView> {
           return ListView(
             padding: const EdgeInsets.fromLTRB(20, 6, 20, 36),
             children: [
-              Text(
-                'Every adventure,\nin one place.',
-                style: Theme.of(context).textTheme.headlineLarge,
+              Container(
+                padding: const EdgeInsets.all(22),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [AppColors.hibiscus, AppColors.purple],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.hibiscus.withValues(alpha: .2),
+                      blurRadius: 24,
+                      offset: const Offset(0, 11),
+                    ),
+                  ],
+                ),
+                child: Stack(
+                  children: [
+                    Positioned(
+                      right: -24,
+                      bottom: -34,
+                      child: Icon(
+                        Icons.map_rounded,
+                        color: Colors.white.withValues(alpha: .1),
+                        size: 140,
+                      ),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const StatusPill(
+                          label: 'Adventure archive',
+                          icon: Icons.auto_stories_rounded,
+                          color: AppColors.ink,
+                          background: AppColors.mango,
+                        ),
+                        const SizedBox(height: 17),
+                        Text(
+                          'Every adventure,\nin one place.',
+                          style: Theme.of(context).textTheme.headlineLarge
+                              ?.copyWith(color: Colors.white),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Continue where you stopped or revisit a completed Malaysian mystery.',
+                          style: TextStyle(color: Colors.white70, height: 1.4),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Continue active or paused missions and revisit completed journeys.',
-                style: Theme.of(context).textTheme.bodyLarge,
-              ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 22),
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
@@ -224,66 +268,115 @@ class _MissionHistoryCard extends StatelessWidget {
     };
 
     return Card(
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
         onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(17, 16, 14, 16),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.white, color.withValues(alpha: .07)],
+            ),
+          ),
+          child: Stack(
             children: [
-              Container(
-                width: 60,
-                height: 72,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: .12),
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  mission.emoji,
-                  style: const TextStyle(fontSize: 32),
-                ),
+              Positioned(
+                left: -17,
+                top: -16,
+                bottom: -16,
+                child: Container(width: 5, color: color),
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 62,
+                    height: 76,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          color.withValues(alpha: .2),
+                          color.withValues(alpha: .07),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                      border: Border.all(color: color.withValues(alpha: .18)),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      mission.emoji,
+                      style: const TextStyle(fontSize: 32),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: Text(
-                            mission.title,
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                mission.title,
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                            ),
+                            StatusPill(label: label, color: color, icon: icon),
+                          ],
                         ),
-                        StatusPill(label: label, color: color, icon: icon),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${mission.region} • ${mission.dateLabel}',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        const SizedBox(height: 10),
+                        LinearProgressIndicator(
+                          value: mission.progress,
+                          minHeight: 7,
+                          borderRadius: BorderRadius.circular(99),
+                          color: color,
+                          backgroundColor: color.withValues(alpha: .12),
+                        ),
+                        const SizedBox(height: 7),
+                        Row(
+                          children: [
+                            Text(
+                              'Stage ${mission.currentStage} of ${mission.totalStages}',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const Spacer(),
+                            Text(
+                              mission.status == MissionStatus.completed
+                                  ? 'View memories'
+                                  : mission.status == MissionStatus.paused
+                                  ? 'Resume'
+                                  : mission.status == MissionStatus.ready
+                                  ? 'Start'
+                                  : 'Continue',
+                              style: TextStyle(
+                                color: color,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            const SizedBox(width: 3),
+                            Icon(
+                              Icons.arrow_forward_rounded,
+                              color: color,
+                              size: 15,
+                            ),
+                          ],
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${mission.region} • ${mission.dateLabel}',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                    const SizedBox(height: 10),
-                    LinearProgressIndicator(
-                      value: mission.progress,
-                      minHeight: 7,
-                      borderRadius: BorderRadius.circular(99),
-                      color: color,
-                      backgroundColor: color.withValues(alpha: .12),
-                    ),
-                    const SizedBox(height: 5),
-                    Text(
-                      'Stage ${mission.currentStage} of ${mission.totalStages}',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ],
           ),

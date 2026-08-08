@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../controller/user_profile/user_profile_facade_interface.dart';
-import '../../theme/app_colors.dart';
-import '../../theme/app_spacing.dart';
-import '../../widgets/section_header.dart';
+import '../app_colors.dart';
+import '../app_spacing.dart';
+import '../section_header.dart';
 
 class ProfileView extends StatefulWidget {
   const ProfileView({required this.facade, super.key});

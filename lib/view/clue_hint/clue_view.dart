@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../controller/clue_hint/clue_hint_facade_interface.dart';
-import '../../theme/app_colors.dart';
-import '../../theme/app_spacing.dart';
-import '../../widgets/status_pill.dart';
+import '../app_colors.dart';
+import '../app_spacing.dart';
+import '../status_pill.dart';
 
 class ClueView extends StatefulWidget {
   const ClueView({required this.facade, super.key, this.totalStages = 3});
