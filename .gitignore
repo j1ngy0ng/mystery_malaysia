@@ -48,5 +48,6 @@ app.*.map.json
 # keeping environment-specific values out of Git prevents accidental mix-ups.
 .env.local.json
 /supabase/.temp/
+/supabase/functions/.env.local
 
 /tmp/

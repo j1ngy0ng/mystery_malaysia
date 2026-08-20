@@ -1,13 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../controller/app_dependencies.dart';
-import '../../controller/active_mission/active_mission_facade_interface.dart';
 import '../../controller/user_profile/user_profile_facade_interface.dart';
-import '../../model/active_mission/mission_session.dart';
-import '../active_mission/active_mission_view.dart';
 import '../app_colors.dart';
-import '../app_spacing.dart';
 import '../app_logo.dart';
+import '../app_spacing.dart';
 import '../malaysia_backdrop.dart';
 import '../section_header.dart';
 import '../status_pill.dart';
@@ -16,13 +12,11 @@ class HomeView extends StatefulWidget {
   const HomeView({
     required this.profileFacade,
     required this.notificationFacade,
-    required this.missionFacade,
     super.key,
   });
 
   final IUserProfileFacade profileFacade;
   final INotificationFacade notificationFacade;
-  final IMissionHistoryFacade missionFacade;
 
   @override
   State<HomeView> createState() => _HomeViewState();
@@ -31,14 +25,11 @@ class HomeView extends StatefulWidget {
 class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   late final IUserProfileFacade profileFacade = widget.profileFacade;
   late final INotificationFacade notificationFacade = widget.notificationFacade;
-  late final IMissionHistoryFacade missionFacade = widget.missionFacade;
-  MissionLaunch? currentMission;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _loadCurrentMission();
     _loadIdentityAndNotifications();
   }
 
@@ -47,7 +38,6 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     profileFacade.dispose();
     notificationFacade.dispose();
-    missionFacade.dispose();
     super.dispose();
   }
 
@@ -62,7 +52,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     return MalaysiaBackdrop(
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 18, 20, 110),
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 112),
         children: [
           Row(
             children: [
@@ -71,94 +61,67 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
               _notificationButton(),
             ],
           ),
-          const SizedBox(height: 28),
+          const SizedBox(height: 26),
           Text(
-            'Hai, ${_displayName()}! 👋',
+            'Where will you explore next?',
             style: Theme.of(context).textTheme.headlineLarge,
           ),
-          const SizedBox(height: 5),
+          const SizedBox(height: 6),
           Text(
-            'Where will today’s mystery take you?',
+            'Hi, ${_displayName()} — uncover another side of Malaysia.',
             style: Theme.of(context).textTheme.bodyLarge,
           ),
-          const SizedBox(height: 22),
-          _DiscoveryHero(
-            onStart: () => Navigator.pushNamed(context, '/missions/request'),
+          const SizedBox(height: 20),
+          _TravelHero(
+            onTap: () => Navigator.pushNamed(context, '/missions/request'),
           ),
-          const SizedBox(height: 28),
-          SectionHeader(
-            title: 'Your missions',
-            action: 'View history',
-            onAction: () => Navigator.pushNamed(context, '/missions'),
+          const SizedBox(height: 30),
+          const SectionHeader(title: 'Explore Malaysia differently'),
+          const SizedBox(height: 4),
+          Text(
+            'Travel experiences designed around discovery',
+            style: Theme.of(context).textTheme.bodyMedium,
           ),
-          const SizedBox(height: 10),
-          if (currentMission != null)
-            _MissionSummaryCard(
-              title: currentMission!.title,
-              subtitle:
-                  '${currentMission!.region} • Stage ${currentMission!.currentStage} of ${currentMission!.totalStages}',
-              status: switch (currentMission!.status) {
-                MissionStatus.ready => 'Ready to start',
-                MissionStatus.paused => 'Paused',
-                _ => 'Active',
-              },
-              emoji: '🧭',
-              color: switch (currentMission!.status) {
-                MissionStatus.ready => AppColors.mango,
-                MissionStatus.paused => AppColors.purple,
-                _ => AppColors.green,
-              },
-              progress:
-                  currentMission!.currentStage / currentMission!.totalStages,
-              actionLabel: switch (currentMission!.status) {
-                MissionStatus.ready => 'Start mission',
-                MissionStatus.paused => 'Resume mission',
-                _ => 'Continue mission',
-              },
-              onTap: () async {
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute<void>(
-                    builder: (_) => ActiveMissionView(
-                      facade: AppDependencies.activeMission(
-                        launch: currentMission,
-                      ),
-                    ),
-                  ),
-                );
-                _loadCurrentMission();
-              },
-            )
-          else
-            Card(
-              child: ListTile(
-                leading: const Icon(
-                  Icons.explore_outlined,
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 164,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: const [
+                _TravelExperienceCard(
+                  icon: Icons.forest_rounded,
+                  title: 'Hidden gems',
+                  message: 'Quieter, safe places near you',
                   color: AppColors.teal,
                 ),
-                title: const Text('No active or paused mission'),
-                subtitle: const Text('Generate one when you are ready.'),
-                onTap: () => Navigator.pushNamed(context, '/missions/request'),
-              ),
+                SizedBox(width: 12),
+                _TravelExperienceCard(
+                  icon: Icons.key_rounded,
+                  title: 'Clue-led trips',
+                  message: 'Explore without destination spoilers',
+                  color: AppColors.hibiscus,
+                ),
+                SizedBox(width: 12),
+                _TravelExperienceCard(
+                  icon: Icons.museum_rounded,
+                  title: 'Local stories',
+                  message: 'Culture and guidance after arrival',
+                  color: AppColors.purple,
+                ),
+              ],
             ),
-          const SizedBox(height: 16),
-          OutlinedButton.icon(
-            onPressed: () => Navigator.pushNamed(context, '/missions'),
-            icon: const Icon(Icons.history_rounded),
-            label: const Text('See all past and current missions'),
+          ),
+          const SizedBox(height: 28),
+          const SectionHeader(title: 'How your mystery trip works'),
+          const SizedBox(height: 12),
+          const _JourneySteps(),
+          const SizedBox(height: 28),
+          _PassportTeaser(
+            onMissions: () => Navigator.pushNamed(context, '/missions'),
           ),
         ],
       ),
     );
-  }
-
-  Future<void> _loadCurrentMission() async {
-    try {
-      final mission = await missionFacade.loadCurrentMission();
-      if (mounted) setState(() => currentMission = mission);
-    } catch (_) {
-      // Keep discovery available if mission history cannot be loaded.
-    }
   }
 
   Future<void> _loadIdentityAndNotifications() async {
@@ -213,212 +176,334 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   }
 }
 
-class _DiscoveryHero extends StatelessWidget {
-  const _DiscoveryHero({required this.onStart});
+class _TravelHero extends StatelessWidget {
+  const _TravelHero({required this.onTap});
 
-  final VoidCallback onStart;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppColors.teal, AppColors.straits],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.teal.withValues(alpha: .24),
-            blurRadius: 26,
-            offset: const Offset(0, 12),
+    return Semantics(
+      button: true,
+      label: 'Generate three mystery missions near your current location',
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+          child: Ink(
+            height: 330,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.straits.withValues(alpha: .24),
+                  blurRadius: 28,
+                  offset: const Offset(0, 13),
+                ),
+              ],
+            ),
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+                    child: Image.asset(
+                      'assets/images/malaysia-travel-hero.png',
+                      fit: BoxFit.cover,
+                      alignment: Alignment.center,
+                    ),
+                  ),
+                ),
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+                      gradient: const LinearGradient(
+                        colors: [
+                          Color(0x1808172A),
+                          Color(0x4D08172A),
+                          Color(0xE610233F),
+                        ],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        stops: [0, .38, 1],
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 18,
+                  top: 18,
+                  child: StatusPill(
+                    label: 'Hidden gems near you',
+                    icon: Icons.location_on_rounded,
+                    color: AppColors.ink,
+                    background: Colors.white.withValues(alpha: .92),
+                  ),
+                ),
+                Positioned(
+                  left: 20,
+                  right: 20,
+                  bottom: 20,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'See a side of Malaysia\nyou did not expect.',
+                        style: Theme.of(context).textTheme.headlineLarge
+                            ?.copyWith(color: Colors.white, height: 1.05),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Turn your location, time and budget into a three-stop mystery trip.',
+                        style: TextStyle(color: Colors.white, height: 1.35),
+                      ),
+                      const SizedBox(height: 14),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 13,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(
+                            AppSpacing.radiusMd,
+                          ),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(
+                              Icons.my_location_rounded,
+                              color: AppColors.teal,
+                            ),
+                            SizedBox(width: 9),
+                            Expanded(
+                              child: Text(
+                                'Plan from my location',
+                                style: TextStyle(
+                                  color: AppColors.ink,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                            Icon(
+                              Icons.arrow_forward_rounded,
+                              color: AppColors.hibiscus,
+                              size: 20,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TravelExperienceCard extends StatelessWidget {
+  const _TravelExperienceCard({
+    required this.icon,
+    required this.title,
+    required this.message,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String title;
+  final String message;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 150,
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: Colors.white.withValues(alpha: .92),
+      borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+      border: Border.all(color: color.withValues(alpha: .15)),
+      boxShadow: [
+        BoxShadow(
+          color: AppColors.night.withValues(alpha: .06),
+          blurRadius: 16,
+          offset: const Offset(0, 7),
+        ),
+      ],
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: .13),
+            borderRadius: BorderRadius.circular(17),
+          ),
+          child: Icon(icon, color: color, size: 27),
+        ),
+        const Spacer(),
+        Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
+        const SizedBox(height: 4),
+        Text(
+          message,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(fontSize: 12, height: 1.25),
+        ),
+      ],
+    ),
+  );
+}
+
+class _JourneySteps extends StatelessWidget {
+  const _JourneySteps();
+
+  @override
+  Widget build(BuildContext context) {
+    const steps = [
+      (Icons.auto_awesome_rounded, 'Generate', '3 choices'),
+      (Icons.key_rounded, 'Explore', 'Follow clues'),
+      (Icons.approval_rounded, 'Collect', 'Badge pieces'),
+    ];
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 20),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: .9),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+        border: Border.all(color: AppColors.outline),
+      ),
+      child: Row(
+        children: [
+          for (var index = 0; index < steps.length; index++) ...[
+            Expanded(
+              child: Column(
+                children: [
+                  CircleAvatar(
+                    radius: 24,
+                    backgroundColor: const [
+                      AppColors.paleMango,
+                      AppColors.paleHibiscus,
+                      AppColors.paleTeal,
+                    ][index],
+                    foregroundColor: const [
+                      AppColors.straits,
+                      AppColors.hibiscus,
+                      AppColors.teal,
+                    ][index],
+                    child: Icon(steps[index].$1),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    steps[index].$2,
+                    style: const TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                  Text(
+                    steps[index].$3,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(fontSize: 11),
+                  ),
+                ],
+              ),
+            ),
+            if (index < steps.length - 1)
+              const Icon(
+                Icons.arrow_forward_rounded,
+                color: AppColors.outline,
+                size: 19,
+              ),
+          ],
         ],
       ),
-      child: Stack(
+    );
+  }
+}
+
+class _PassportTeaser extends StatelessWidget {
+  const _PassportTeaser({required this.onMissions});
+
+  final VoidCallback onMissions;
+
+  @override
+  Widget build(BuildContext context) {
+    const badges = ['sgr', 'png', 'sbh'];
+    return Container(
+      padding: const EdgeInsets.all(19),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFFFF4C7), Color(0xFFE9FFF9)],
+        ),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+        border: Border.all(color: AppColors.mango.withValues(alpha: .3)),
+      ),
+      child: Row(
         children: [
-          Positioned(right: -6, top: -3, child: const _BadgeTrail()),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 238),
+          SizedBox(
+            width: 102,
+            height: 72,
+            child: Stack(
+              children: [
+                for (var index = 0; index < badges.length; index++)
+                  Positioned(
+                    left: index * 25,
+                    top: index.isOdd ? 7 : 0,
+                    child: Container(
+                      width: 60,
+                      height: 60,
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppColors.mango, width: 2),
+                      ),
+                      child: ClipOval(
+                        child: Image.asset(
+                          'assets/images/state_badges/${badges[index]}.webp',
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 13),
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const StatusPill(
-                  label: 'AI mystery maker',
-                  icon: Icons.auto_awesome,
-                  color: AppColors.ink,
-                  background: AppColors.mango,
-                ),
-                const SizedBox(height: 18),
                 Text(
-                  'Find me a mystery',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.headlineMedium?.copyWith(color: Colors.white),
+                  'Build your Malaysia passport',
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
-                const SizedBox(height: 7),
-                const Text(
-                  'We use your current location, time and budget to create a hidden route.',
-                  style: TextStyle(color: Colors.white, height: 1.4),
+                const SizedBox(height: 4),
+                Text(
+                  'Every verified stop reveals one piece of a state mission badge.',
+                  style: Theme.of(context).textTheme.bodyMedium,
                 ),
-                const SizedBox(height: 18),
-                FilledButton.icon(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: AppColors.straits,
-                  ),
-                  onPressed: onStart,
-                  icon: const Icon(Icons.auto_awesome_rounded),
-                  label: const Text('Build my mission'),
+                const SizedBox(height: 6),
+                TextButton.icon(
+                  onPressed: onMissions,
+                  iconAlignment: IconAlignment.end,
+                  icon: const Icon(Icons.arrow_forward_rounded, size: 17),
+                  label: const Text('View my missions'),
                 ),
               ],
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _BadgeTrail extends StatelessWidget {
-  const _BadgeTrail();
-
-  @override
-  Widget build(BuildContext context) {
-    const badges = ['png', 'sbh', 'mlk'];
-    return SizedBox(
-      width: 92,
-      height: 116,
-      child: Stack(
-        children: [
-          for (var index = 0; index < badges.length; index++)
-            Positioned(
-              top: index * 25,
-              right: index.isEven ? 0 : 29,
-              child: Transform.rotate(
-                angle: index.isEven ? .08 : -.1,
-                child: Container(
-                  width: 58,
-                  height: 58,
-                  padding: const EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: AppColors.mango.withValues(alpha: .9),
-                      width: 2,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.ink.withValues(alpha: .2),
-                        blurRadius: 10,
-                        offset: const Offset(0, 5),
-                      ),
-                    ],
-                  ),
-                  child: ClipOval(
-                    child: Image.asset(
-                      'assets/images/state_badges/${badges[index]}.webp',
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MissionSummaryCard extends StatelessWidget {
-  const _MissionSummaryCard({
-    required this.title,
-    required this.subtitle,
-    required this.status,
-    required this.emoji,
-    required this.color,
-    required this.progress,
-    required this.actionLabel,
-    required this.onTap,
-  });
-
-  final String title;
-  final String subtitle;
-  final String status;
-  final String emoji;
-  final Color color;
-  final double progress;
-  final String actionLabel;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                width: 56,
-                height: 66,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: .12),
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                ),
-                alignment: Alignment.center,
-                child: Text(emoji, style: const TextStyle(fontSize: 31)),
-              ),
-              const SizedBox(width: 13),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            title,
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                        ),
-                        StatusPill(label: status, color: color),
-                      ],
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      subtitle,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                    const SizedBox(height: 9),
-                    LinearProgressIndicator(
-                      value: progress,
-                      minHeight: 7,
-                      borderRadius: BorderRadius.circular(99),
-                      color: color,
-                      backgroundColor: color.withValues(alpha: .12),
-                    ),
-                    const SizedBox(height: 4),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton.icon(
-                        onPressed: onTap,
-                        iconAlignment: IconAlignment.end,
-                        icon: const Icon(Icons.arrow_forward_rounded, size: 18),
-                        label: Text(actionLabel),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

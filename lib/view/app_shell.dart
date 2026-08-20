@@ -5,9 +5,9 @@ import '../controller/app_dependencies.dart';
 import '../controller/collaborative_travel/collaborative_travel_facade_interface.dart';
 import '../controller/passport_diary/passport_diary_facade_interface.dart';
 import '../controller/user_profile/user_profile_facade_interface.dart';
+import 'active_mission/mission_history_view.dart';
 import 'app_colors.dart';
 import 'collaborative_travel/invitations_view.dart';
-import 'mission_discovery/explore_view.dart';
 import 'mission_discovery/home_view.dart';
 import 'passport_diary/passport_view.dart';
 import 'user_profile/profile_view.dart';
@@ -24,7 +24,7 @@ class _AppShellState extends State<AppShell> {
   int homeVersion = 0;
   late IUserProfileFacade homeProfileFacade;
   late INotificationFacade homeNotificationFacade;
-  late IMissionHistoryFacade homeMissionFacade;
+  late final IMissionHistoryFacade missionFacade;
   late final IPassportDiaryFacade passportFacade;
   late final ICollaborativeTravelFacade collaborativeFacade;
   late final IUserProfileFacade profileFacade;
@@ -33,6 +33,7 @@ class _AppShellState extends State<AppShell> {
   void initState() {
     super.initState();
     _createHomeFacades();
+    missionFacade = AppDependencies.missionHistory();
     passportFacade = AppDependencies.passportDiary();
     collaborativeFacade = AppDependencies.collaborativeTravel();
     profileFacade = AppDependencies.userProfile();
@@ -41,7 +42,6 @@ class _AppShellState extends State<AppShell> {
   void _createHomeFacades() {
     homeProfileFacade = AppDependencies.userProfile();
     homeNotificationFacade = AppDependencies.notifications();
-    homeMissionFacade = AppDependencies.missionHistory();
   }
 
   @override
@@ -59,9 +59,8 @@ class _AppShellState extends State<AppShell> {
         key: ValueKey(homeVersion),
         profileFacade: homeProfileFacade,
         notificationFacade: homeNotificationFacade,
-        missionFacade: homeMissionFacade,
       ),
-      const ExploreView(),
+      MissionHistoryView(facade: missionFacade, embedded: true),
       PassportView(facade: passportFacade),
       InvitationsView(facade: collaborativeFacade),
       ProfileView(facade: profileFacade),
@@ -125,6 +124,7 @@ class _AppShellState extends State<AppShell> {
                       _createHomeFacades();
                       homeVersion++;
                     }
+                    if (value == 1) missionFacade.load();
                     if (value == 2) passportFacade.load();
                     if (value == 3) collaborativeFacade.loadOverview();
                     if (value == 4) profileFacade.load();
@@ -137,9 +137,9 @@ class _AppShellState extends State<AppShell> {
                       selectedColor,
                     ),
                     _destination(
-                      Icons.travel_explore_outlined,
-                      Icons.travel_explore_rounded,
-                      'Explore',
+                      Icons.flag_outlined,
+                      Icons.flag_rounded,
+                      'Mission',
                       selectedColor,
                     ),
                     _destination(

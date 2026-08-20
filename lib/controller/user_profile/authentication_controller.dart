@@ -15,20 +15,87 @@ class AuthenticationController extends ChangeNotifier {
   String? error;
   String? usernameError;
   String? emailError;
+  String? resetEmailError;
   String? passwordError;
   String? confirmationPasswordError;
   String? genderError;
   String? dateOfBirthError;
+  bool _emailValid = false;
+  bool _resetEmailValid = false;
+  bool _signInPasswordValid = false;
+  bool _usernameValid = false;
+  bool _registrationPasswordValid = false;
+  bool _confirmationPasswordValid = false;
+  bool _genderValid = false;
+  bool _dateOfBirthValid = false;
+
+  bool get canSignIn => _emailValid && _signInPasswordValid;
+  bool get canSendPasswordReset => _resetEmailValid;
+  bool get canRegister =>
+      _usernameValid &&
+      _emailValid &&
+      _registrationPasswordValid &&
+      _confirmationPasswordValid &&
+      _genderValid &&
+      _dateOfBirthValid;
 
   void togglePasswordVisibility() {
     obscurePassword = !obscurePassword;
     notifyListeners();
   }
 
+  void validateEmail(String value) {
+    emailError = _emailValidation(value);
+    _emailValid = emailError == null;
+    notifyListeners();
+  }
+
+  void validateResetEmail(String value) {
+    resetEmailError = _emailValidation(value);
+    _resetEmailValid = resetEmailError == null;
+    notifyListeners();
+  }
+
+  void validateSignInPassword(String value) {
+    passwordError = value.trim().isEmpty ? 'Password is required.' : null;
+    _signInPasswordValid = passwordError == null;
+    notifyListeners();
+  }
+
+  void validateUsername(String value) {
+    usernameError = _usernameValidation(value);
+    _usernameValid = usernameError == null;
+    notifyListeners();
+  }
+
+  void validateRegistrationPassword(String value) {
+    passwordError = _passwordValidation(value);
+    _registrationPasswordValid = passwordError == null;
+    notifyListeners();
+  }
+
+  void validatePasswordConfirmation(String password, String confirmation) {
+    confirmationPasswordError = _confirmationValidation(password, confirmation);
+    _confirmationPasswordValid = confirmationPasswordError == null;
+    notifyListeners();
+  }
+
+  void validateGender(String value) {
+    genderError = value.isEmpty ? 'Select a gender option.' : null;
+    _genderValid = genderError == null;
+    notifyListeners();
+  }
+
+  void validateDateOfBirth(DateTime? value) {
+    dateOfBirthError = value == null ? 'Select your date of birth.' : null;
+    _dateOfBirthValid = dateOfBirthError == null;
+    notifyListeners();
+  }
+
   Future<bool> signIn(String email, String password) async {
     _clearErrors();
-    if (!_validEmail(email)) emailError = 'Enter a valid email address.';
-    if (password.isEmpty) passwordError = 'Enter your password.';
+    emailError = _emailValidation(email);
+    if (password.trim().isEmpty) passwordError = 'Password is required.';
     if (emailError != null || passwordError != null) {
       notifyListeners();
       return false;
@@ -53,23 +120,13 @@ class AuthenticationController extends ChangeNotifier {
     required DateTime? dateOfBirth,
   }) async {
     _clearErrors();
-    if (username.trim().length < 3) {
-      usernameError = 'Username must contain at least 3 characters.';
-    }
-    if (!_validEmail(email)) emailError = 'Enter a valid email address.';
-    final strongPassword =
-        password.length >= 8 &&
-        password.contains(RegExp('[A-Z]')) &&
-        password.contains(RegExp('[a-z]')) &&
-        password.contains(RegExp('[0-9]')) &&
-        password.contains(RegExp(r'[^A-Za-z0-9]'));
-    if (!strongPassword) {
-      passwordError =
-          'Use 8+ characters with uppercase, lowercase, number and symbol.';
-    }
-    if (password != confirmationPassword) {
-      confirmationPasswordError = 'The passwords do not match.';
-    }
+    usernameError = _usernameValidation(username);
+    emailError = _emailValidation(email);
+    passwordError = _passwordValidation(password);
+    confirmationPasswordError = _confirmationValidation(
+      password,
+      confirmationPassword,
+    );
     if (gender.isEmpty) genderError = 'Select a gender option.';
     if (dateOfBirth == null) dateOfBirthError = 'Select your date of birth.';
     if (usernameError != null ||
@@ -100,12 +157,20 @@ class AuthenticationController extends ChangeNotifier {
 
   Future<bool> sendPasswordReset(String email) async {
     _clearErrors();
-    if (!_validEmail(email)) {
-      error = 'Enter a valid registered email address.';
+    resetEmailError = _emailValidation(email);
+    if (resetEmailError != null) {
       notifyListeners();
       return false;
     }
-    return _run(() => _authService.sendPasswordReset(email));
+    return _run(() async {
+      if (!await _authService.isEmailRegistered(email)) {
+        throw const ApiError(
+          'No account is registered with this email.',
+          code: 'email_not_registered',
+        );
+      }
+      await _authService.sendPasswordReset(email);
+    }, flow: 'password_reset');
   }
 
   Future<bool> updatePassword(
@@ -113,13 +178,7 @@ class AuthenticationController extends ChangeNotifier {
     String confirmationPassword,
   ) async {
     _clearErrors();
-    final strongPassword =
-        password.length >= 8 &&
-        password.contains(RegExp('[A-Z]')) &&
-        password.contains(RegExp('[a-z]')) &&
-        password.contains(RegExp('[0-9]')) &&
-        password.contains(RegExp(r'[^A-Za-z0-9]'));
-    if (!strongPassword) {
+    if (!_strongPassword(password)) {
       passwordError =
           'Use 8+ characters with uppercase, lowercase, number and symbol.';
       notifyListeners();
@@ -154,6 +213,8 @@ class AuthenticationController extends ChangeNotifier {
         } else {
           passwordError = apiError.message;
         }
+      } else if (flow == 'password_reset') {
+        resetEmailError = apiError.message;
       } else {
         error = apiError.message;
       }
@@ -164,13 +225,44 @@ class AuthenticationController extends ChangeNotifier {
     }
   }
 
-  bool _validEmail(String value) =>
-      RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(value.trim());
+  String? _emailValidation(String value) {
+    if (value.trim().isEmpty) return 'Email is required.';
+    return RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(value.trim())
+        ? null
+        : 'Enter a valid email address, for example name@example.com.';
+  }
+
+  String? _usernameValidation(String value) {
+    if (value.trim().isEmpty) return 'Username is required.';
+    return value.trim().length < 3
+        ? 'Username must contain at least 3 characters.'
+        : null;
+  }
+
+  String? _passwordValidation(String value) {
+    if (value.trim().isEmpty) return 'Password is required.';
+    return _strongPassword(value)
+        ? null
+        : 'Use 8+ characters with uppercase, lowercase, number and symbol.';
+  }
+
+  String? _confirmationValidation(String password, String confirmation) {
+    if (confirmation.isEmpty) return 'Confirm your password.';
+    return password == confirmation ? null : 'The passwords do not match.';
+  }
+
+  bool _strongPassword(String value) =>
+      value.length >= 8 &&
+      value.contains(RegExp('[A-Z]')) &&
+      value.contains(RegExp('[a-z]')) &&
+      value.contains(RegExp('[0-9]')) &&
+      value.contains(RegExp(r'[^A-Za-z0-9]'));
 
   void _clearErrors() {
     error = null;
     usernameError = null;
     emailError = null;
+    resetEmailError = null;
     passwordError = null;
     confirmationPasswordError = null;
     genderError = null;

@@ -1,7 +1,7 @@
 import { withSupabase } from "npm:@supabase/server@1.4.1";
 
 type Input = {
-  action?: "overview" | "lobby" | "invite" | "respond" | "remove" | "ready" | "start" | "reflection";
+  action?: "overview" | "lobby" | "invite" | "respond" | "remove" | "leave" | "ready" | "start" | "reflection";
   session_id?: string;
   invitation_id?: string;
   email?: string;
@@ -291,6 +291,42 @@ export default {
           data: { session_id: session.id },
         });
         return Response.json({ removed: true });
+      }
+
+      if (input.action === "leave") {
+        if (participant.role === "host") {
+          return Response.json({
+            message: "The host cannot quit the crew. Abandon the shared mission instead.",
+          }, { status: 409 });
+        }
+        if (!["waiting", "active", "paused"].includes(session.status)) {
+          return Response.json({
+            message: "This shared mission can no longer be left.",
+          }, { status: 409 });
+        }
+        const { error: leaveError } = await admin.from("mission_participants")
+          .update({ status: "left", ready: false })
+          .eq("session_id", session.id)
+          .eq("user_id", userId);
+        if (leaveError) throw leaveError;
+        await admin.from("user_current_missions").delete()
+          .eq("session_id", session.id).eq("user_id", userId);
+        const { data: host } = await admin.from("mission_participants")
+          .select("user_id").eq("session_id", session.id).eq("role", "host")
+          .neq("status", "left").maybeSingle();
+        if (host) {
+          await admin.from("notifications").insert({
+            user_id: host.user_id,
+            notification_type: "mission_member_left",
+            title: "A teammate left the mission",
+            body: "A traveller has left your shared mission crew.",
+            data: { session_id: session.id, member_id: userId },
+          });
+        }
+        return Response.json({
+          left: true,
+          message: "You left the shared mission.",
+        });
       }
 
       if (input.action === "ready") {

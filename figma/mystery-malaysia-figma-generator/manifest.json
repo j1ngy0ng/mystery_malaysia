@@ -1,0 +1,11 @@
+{
+  "name": "Mystery Malaysia UI Generator",
+  "id": "1594861091846550000",
+  "api": "1.0.0",
+  "main": "code.js",
+  "editorType": ["figma"],
+  "documentAccess": "dynamic-page",
+  "networkAccess": {
+    "allowedDomains": ["none"]
+  }
+}

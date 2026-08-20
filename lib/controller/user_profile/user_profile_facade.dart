@@ -21,11 +21,19 @@ class AuthenticationFacade extends ChangeNotifier
   @override
   bool get isLoading => _controller.isLoading;
   @override
+  bool get canSignIn => _controller.canSignIn;
+  @override
+  bool get canRegister => _controller.canRegister;
+  @override
+  bool get canSendPasswordReset => _controller.canSendPasswordReset;
+  @override
   String? get error => _controller.error;
   @override
   String? get usernameError => _controller.usernameError;
   @override
   String? get emailError => _controller.emailError;
+  @override
+  String? get resetEmailError => _controller.resetEmailError;
   @override
   String? get passwordError => _controller.passwordError;
   @override
@@ -38,6 +46,27 @@ class AuthenticationFacade extends ChangeNotifier
 
   @override
   void togglePasswordVisibility() => _controller.togglePasswordVisibility();
+  @override
+  void validateEmail(String value) => _controller.validateEmail(value);
+  @override
+  void validateResetEmail(String value) =>
+      _controller.validateResetEmail(value);
+  @override
+  void validateSignInPassword(String value) =>
+      _controller.validateSignInPassword(value);
+  @override
+  void validateUsername(String value) => _controller.validateUsername(value);
+  @override
+  void validateRegistrationPassword(String value) =>
+      _controller.validateRegistrationPassword(value);
+  @override
+  void validatePasswordConfirmation(String password, String confirmation) =>
+      _controller.validatePasswordConfirmation(password, confirmation);
+  @override
+  void validateGender(String value) => _controller.validateGender(value);
+  @override
+  void validateDateOfBirth(DateTime? value) =>
+      _controller.validateDateOfBirth(value);
   @override
   Future<bool> signIn(String email, String password) =>
       _controller.signIn(email, password);

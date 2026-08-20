@@ -1,4 +1,5 @@
 import { withSupabase } from "npm:@supabase/server@1.4.1";
+import { pauseCurrentMission } from "../_shared/mission-lifecycle.ts";
 
 type Input = {
   action?: "history" | "current" | "pause" | "resume" | "abandon" | "proximity" | "hint" | "clue_viewed";
@@ -104,6 +105,9 @@ export default {
           }, { status: 409 });
         }
         const now = new Date().toISOString();
+        if (input.action === "resume") {
+          await pauseCurrentMission(admin, userId, session.id);
+        }
         const status = input.action === "pause"
           ? "paused"
           : input.action === "resume"
@@ -116,6 +120,14 @@ export default {
         const { error } = await admin.from("mission_sessions")
           .update(update).eq("id", session.id);
         if (error) throw error;
+        if (status === "active") {
+          const { error: currentMissionError } = await admin
+            .from("user_current_missions")
+            .upsert({ user_id: userId, session_id: session.id }, {
+              onConflict: "user_id",
+            });
+          if (currentMissionError) throw currentMissionError;
+        }
         await admin.from("mission_session_events").insert({
           session_id: session.id,
           actor_id: userId,

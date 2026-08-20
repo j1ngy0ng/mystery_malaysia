@@ -64,9 +64,36 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('a teammate can quit their shared mission', (tester) async {
+    final facade = _CrewFacade(host: false);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.bright,
+        home: SharedMissionView(facade: facade),
+      ),
+    );
+
+    await tester.scrollUntilVisible(
+      find.text('Quit shared mission'),
+      250,
+      scrollable: find.byType(Scrollable),
+    );
+    await tester.tap(find.text('Quit shared mission'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Quit mission'));
+    await tester.pumpAndSettle();
+
+    expect(facade.left, true);
+  });
 }
 
 class _CrewFacade extends ChangeNotifier implements ICollaborativeTravelFacade {
+  _CrewFacade({this.host = true});
+
+  final bool host;
+  bool left = false;
+
   @override
   String? get sessionId => 'session-1';
   @override
@@ -74,7 +101,7 @@ class _CrewFacade extends ChangeNotifier implements ICollaborativeTravelFacade {
   @override
   String get status => 'waiting';
   @override
-  bool get isHost => true;
+  bool get isHost => host;
   @override
   bool get isReady => false;
   @override
@@ -104,6 +131,12 @@ class _CrewFacade extends ChangeNotifier implements ICollaborativeTravelFacade {
 
   @override
   Future<void> loadLobby() async {}
+
+  @override
+  Future<bool> leave() async {
+    left = true;
+    return true;
+  }
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

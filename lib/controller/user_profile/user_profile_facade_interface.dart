@@ -7,15 +7,27 @@ import '../../model/user_profile/user_profile.dart';
 abstract interface class IAuthenticationFacade implements Listenable {
   bool get obscurePassword;
   bool get isLoading;
+  bool get canSignIn;
+  bool get canRegister;
+  bool get canSendPasswordReset;
   String? get error;
   String? get usernameError;
   String? get emailError;
+  String? get resetEmailError;
   String? get passwordError;
   String? get confirmationPasswordError;
   String? get genderError;
   String? get dateOfBirthError;
 
   void togglePasswordVisibility();
+  void validateEmail(String value);
+  void validateResetEmail(String value);
+  void validateSignInPassword(String value);
+  void validateUsername(String value);
+  void validateRegistrationPassword(String value);
+  void validatePasswordConfirmation(String password, String confirmation);
+  void validateGender(String value);
+  void validateDateOfBirth(DateTime? value);
   Future<bool> signIn(String email, String password);
   Future<RegistrationResult?> register({
     required String username,

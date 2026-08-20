@@ -355,6 +355,13 @@ class DemoApiManager {
     }
     if (action == 'remove') {
       sharedMembers.removeWhere((item) => item['user_id'] == body['member_id']);
+    } else if (action == 'leave') {
+      sharedMembers.removeWhere((item) => item['user_id'] == 'demo-user');
+      return {
+        'session_id': 'demo-shared',
+        'left': true,
+        'message': 'You left the shared mission.',
+      };
     } else if (action == 'ready') {
       viewerReady = body['ready'] == true;
       sharedMembers.first['ready'] = viewerReady;

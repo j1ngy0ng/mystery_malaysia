@@ -23,6 +23,8 @@ abstract final class AppTheme {
 
     return ThemeData(
       useMaterial3: true,
+      fontFamily: 'Roboto',
+      fontFamilyFallback: const ['Segoe UI Emoji'],
       colorScheme: scheme,
       scaffoldBackgroundColor: Colors.transparent,
       textTheme: AppTypography.textTheme,
@@ -34,6 +36,7 @@ abstract final class AppTheme {
         surfaceTintColor: Colors.transparent,
         centerTitle: false,
         titleTextStyle: TextStyle(
+          fontFamily: 'Roboto',
           color: AppColors.ink,
           fontSize: 20,
           fontWeight: FontWeight.w900,
@@ -115,6 +118,7 @@ abstract final class AppTheme {
         indicatorColor: AppColors.paleTeal,
         labelTextStyle: WidgetStateProperty.resolveWith(
           (states) => TextStyle(
+            fontFamily: 'Roboto',
             color: states.contains(WidgetState.selected)
                 ? AppColors.ink
                 : AppColors.secondaryText,
@@ -135,7 +139,10 @@ abstract final class AppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: AppColors.darkTeal,
-          textStyle: const TextStyle(fontWeight: FontWeight.w800),
+          textStyle: const TextStyle(
+            fontFamily: 'Roboto',
+            fontWeight: FontWeight.w800,
+          ),
         ),
       ),
       listTileTheme: ListTileThemeData(
@@ -149,6 +156,7 @@ abstract final class AppTheme {
         side: BorderSide(color: AppColors.straits.withValues(alpha: .08)),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(99)),
         labelStyle: const TextStyle(
+          fontFamily: 'Roboto',
           color: AppColors.ink,
           fontWeight: FontWeight.w800,
         ),
@@ -156,6 +164,7 @@ abstract final class AppTheme {
       snackBarTheme: SnackBarThemeData(
         backgroundColor: AppColors.ink,
         contentTextStyle: const TextStyle(
+          fontFamily: 'Roboto',
           color: Colors.white,
           fontWeight: FontWeight.w700,
         ),

@@ -4,6 +4,20 @@ import 'package:mystery_malaysia/controller/services/supabase/supabase_auth_serv
 import 'package:mystery_malaysia/controller/user_profile/authentication_controller.dart';
 
 void main() {
+  test('validates local formats without querying account data', () {
+    final service = _AuthService(registered: true);
+    final controller = AuthenticationController(authService: service);
+
+    controller.validateEmail('not-an-email');
+    controller.validateRegistrationPassword('weak');
+    controller.validateUsername('ab');
+
+    expect(controller.emailError, contains('name@example.com'));
+    expect(controller.passwordError, contains('8+ characters'));
+    expect(controller.usernameError, contains('at least 3'));
+    expect(service.registrationChecks, 0);
+  });
+
   test('places an unknown login email error under the email field', () async {
     final controller = AuthenticationController(
       authService: _AuthService(registered: false),
@@ -23,6 +37,49 @@ void main() {
     expect(controller.emailError, isNull);
     expect(controller.passwordError, 'The email or password is incorrect.');
   });
+
+  test('keeps an unknown reset email error under the email field', () async {
+    final controller = AuthenticationController(
+      authService: _AuthService(registered: false),
+    );
+
+    expect(await controller.sendPasswordReset('missing@example.com'), false);
+    expect(
+      controller.resetEmailError,
+      'No account is registered with this email.',
+    );
+  });
+
+  test('sends password reset for a registered email', () async {
+    final service = _AuthService(registered: true);
+    final controller = AuthenticationController(authService: service);
+
+    expect(await controller.sendPasswordReset('known@example.com'), true);
+    expect(service.resetSent, true);
+  });
+
+  test('enables buttons only after every local field is valid', () {
+    final controller = AuthenticationController(
+      authService: _AuthService(registered: true),
+    );
+
+    expect(controller.canSignIn, false);
+    controller.validateEmail('person@example.com');
+    controller.validateSignInPassword('Password!1');
+    expect(controller.canSignIn, true);
+
+    expect(controller.canRegister, false);
+    controller.validateUsername('traveller');
+    controller.validateRegistrationPassword('Password!1');
+    controller.validatePasswordConfirmation('Password!1', 'Password!1');
+    controller.validateGender('female');
+    controller.validateDateOfBirth(DateTime(2000, 1, 1));
+    expect(controller.canRegister, true);
+
+    expect(controller.canSendPasswordReset, false);
+    controller.validateResetEmail('person@example.com');
+    expect(controller.canSendPasswordReset, true);
+  });
 }
 
 class _AuthService extends SupabaseAuthService {
@@ -30,9 +87,14 @@ class _AuthService extends SupabaseAuthService {
 
   final bool registered;
   final bool rejectPassword;
+  bool resetSent = false;
+  int registrationChecks = 0;
 
   @override
-  Future<bool> isEmailRegistered(String email) async => registered;
+  Future<bool> isEmailRegistered(String email) async {
+    registrationChecks++;
+    return registered;
+  }
 
   @override
   Future<void> signIn({required String email, required String password}) async {
@@ -42,5 +104,10 @@ class _AuthService extends SupabaseAuthService {
         code: 'invalid_credentials',
       );
     }
+  }
+
+  @override
+  Future<void> sendPasswordReset(String email) async {
+    resetSent = true;
   }
 }

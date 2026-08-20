@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mystery_malaysia/view/app.dart';
-import 'package:mystery_malaysia/controller/active_mission/active_mission_facade_interface.dart';
 import 'package:mystery_malaysia/controller/user_profile/user_profile_facade_interface.dart';
-import 'package:mystery_malaysia/model/active_mission/mission_session.dart';
 import 'package:mystery_malaysia/model/user_profile/user_profile.dart';
 import 'package:mystery_malaysia/view/mission_discovery/home_view.dart';
 import 'package:mystery_malaysia/view/app_theme.dart';
@@ -17,14 +15,20 @@ void main() {
           body: HomeView(
             profileFacade: _ProfileFacade(),
             notificationFacade: _NotificationFacade(),
-            missionFacade: _MissionFacade(),
           ),
         ),
       ),
     );
 
     expect(find.text('Mystery MY'), findsOneWidget);
-    expect(find.text('Find me a mystery'), findsOneWidget);
+    expect(find.text('Where will you explore next?'), findsOneWidget);
+    expect(find.text('Plan from my location'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Explore Malaysia differently'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Explore Malaysia differently'), findsOneWidget);
   });
 
   testWidgets('starts with tourism onboarding', (tester) async {
@@ -58,14 +62,6 @@ class _NotificationFacade extends ChangeNotifier
 
   @override
   Future<void> load() async {}
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
-}
-
-class _MissionFacade extends ChangeNotifier implements IMissionHistoryFacade {
-  @override
-  Future<MissionLaunch?> loadCurrentMission() async => null;
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

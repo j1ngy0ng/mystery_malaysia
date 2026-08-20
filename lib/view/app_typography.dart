@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'app_colors.dart';
 
 abstract final class AppTypography {
-  static const textTheme = TextTheme(
+  static final textTheme = const TextTheme(
     displaySmall: TextStyle(
       fontSize: 38,
       height: 1.05,
@@ -41,5 +41,5 @@ abstract final class AppTypography {
       color: AppColors.secondaryText,
     ),
     labelLarge: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
-  );
+  ).apply(fontFamily: 'Roboto');
 }

@@ -73,6 +73,11 @@ class CollaborativeTravelController extends ChangeNotifier {
     'member_id': memberId,
   });
 
+  Future<bool> leave() => _mutation({
+    'action': 'leave',
+    'session_id': sessionId,
+  }, reloadLobby: false);
+
   Future<bool> toggleReady() => _mutation({
     'action': 'ready',
     'session_id': sessionId,
@@ -85,6 +90,7 @@ class CollaborativeTravelController extends ChangeNotifier {
   Future<bool> _mutation(
     Map<String, dynamic> body, {
     bool reloadOverview = false,
+    bool reloadLobby = true,
   }) async {
     var success = false;
     await _run(() async {
@@ -98,7 +104,7 @@ class CollaborativeTravelController extends ChangeNotifier {
         final overview = await _dataService.loadSharedOverview();
         sessions = overview.sessions;
         invitations = overview.invitations;
-      } else if (sessionId != null) {
+      } else if (reloadLobby && sessionId != null) {
         final lobby = await _dataService.sharedMission({
           'action': 'lobby',
           'session_id': sessionId,

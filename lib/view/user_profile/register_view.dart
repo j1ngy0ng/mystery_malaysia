@@ -67,6 +67,7 @@ class _RegisterViewState extends State<RegisterView> {
               TextField(
                 controller: username,
                 textInputAction: TextInputAction.next,
+                onChanged: facade.validateUsername,
                 decoration: InputDecoration(
                   labelText: 'Username',
                   prefixIcon: const Icon(Icons.alternate_email_rounded),
@@ -78,6 +79,7 @@ class _RegisterViewState extends State<RegisterView> {
                 controller: email,
                 keyboardType: TextInputType.emailAddress,
                 textInputAction: TextInputAction.next,
+                onChanged: facade.validateEmail,
                 decoration: InputDecoration(
                   labelText: 'Email',
                   prefixIcon: const Icon(Icons.mail_outline_rounded),
@@ -104,7 +106,10 @@ class _RegisterViewState extends State<RegisterView> {
                     child: Text('Prefer not to say'),
                   ),
                 ],
-                onChanged: (value) => setState(() => gender = value ?? ''),
+                onChanged: (value) {
+                  setState(() => gender = value ?? '');
+                  facade.validateGender(gender);
+                },
               ),
               const SizedBox(height: 14),
               InkWell(
@@ -127,6 +132,13 @@ class _RegisterViewState extends State<RegisterView> {
               TextField(
                 controller: password,
                 obscureText: facade.obscurePassword,
+                onChanged: (value) {
+                  facade.validateRegistrationPassword(value);
+                  facade.validatePasswordConfirmation(
+                    value,
+                    confirmationPassword.text,
+                  );
+                },
                 onSubmitted: (_) => _register(),
                 decoration: InputDecoration(
                   labelText: 'Password',
@@ -146,6 +158,8 @@ class _RegisterViewState extends State<RegisterView> {
               TextField(
                 controller: confirmationPassword,
                 obscureText: facade.obscurePassword,
+                onChanged: (value) =>
+                    facade.validatePasswordConfirmation(password.text, value),
                 onSubmitted: (_) => _register(),
                 decoration: InputDecoration(
                   labelText: 'Confirm password',
@@ -177,7 +191,9 @@ class _RegisterViewState extends State<RegisterView> {
                 ),
               const SizedBox(height: 22),
               FilledButton(
-                onPressed: facade.isLoading ? null : _register,
+                onPressed: facade.isLoading || !facade.canRegister
+                    ? null
+                    : _register,
                 child: facade.isLoading
                     ? const SizedBox.square(
                         dimension: 20,
@@ -246,5 +262,6 @@ class _RegisterViewState extends State<RegisterView> {
       initialDate: dateOfBirth ?? DateTime(now.year - 18),
     );
     if (selected != null) setState(() => dateOfBirth = selected);
+    facade.validateDateOfBirth(dateOfBirth);
   }
 }

@@ -12,9 +12,14 @@ import 'active_mission_view.dart';
 import '../collaborative_travel/shared_mission_view.dart';
 
 class MissionHistoryView extends StatefulWidget {
-  const MissionHistoryView({required this.facade, super.key});
+  const MissionHistoryView({
+    required this.facade,
+    super.key,
+    this.embedded = false,
+  });
 
   final IMissionHistoryFacade facade;
+  final bool embedded;
 
   @override
   State<MissionHistoryView> createState() => _MissionHistoryViewState();
@@ -38,12 +43,15 @@ class _MissionHistoryViewState extends State<MissionHistoryView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('My missions')),
+      appBar: AppBar(
+        automaticallyImplyLeading: !widget.embedded,
+        title: const Text('My missions'),
+      ),
       body: AnimatedBuilder(
         animation: facade,
         builder: (context, _) {
           return ListView(
-            padding: const EdgeInsets.fromLTRB(20, 6, 20, 36),
+            padding: EdgeInsets.fromLTRB(20, 6, 20, widget.embedded ? 112 : 36),
             children: [
               Container(
                 padding: const EdgeInsets.all(22),

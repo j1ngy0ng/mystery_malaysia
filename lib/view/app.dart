@@ -35,25 +35,32 @@ class _MysteryMalaysiaAppState extends State<MysteryMalaysiaApp> {
       linkSubscription = AppLinks().uriLinkStream.listen((uri) {
         if (uri.host != 'mission-invite') return;
         final signedIn = Supabase.instance.client.auth.currentSession != null;
-        navigatorKey.currentState?.pushNamedAndRemoveUntil(
-          signedIn ? '/home' : '/auth/register',
-          (_) => false,
-        );
+        _replaceAll(signedIn ? '/home' : '/auth/register');
       });
     }
     authSubscription = widget.authStateChanges?.listen((authState) {
       if (authState.event == AuthChangeEvent.passwordRecovery) {
-        navigatorKey.currentState?.pushNamedAndRemoveUntil(
-          '/auth/update-password',
-          (_) => false,
-        );
+        _replaceAll('/auth/update-password');
         return;
       }
       if (authState.event != AuthChangeEvent.signedIn ||
           authState.session == null) {
         return;
       }
-      navigatorKey.currentState?.pushNamedAndRemoveUntil('/home', (_) => false);
+      _replaceAll('/home');
+    }, onError: (Object _, StackTrace _) {});
+  }
+
+  void _replaceAll(String route) {
+    final navigator = navigatorKey.currentState;
+    if (navigator != null) {
+      navigator.pushNamedAndRemoveUntil(route, (_) => false);
+      return;
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      navigatorKey.currentState?.pushNamedAndRemoveUntil(route, (_) => false);
     });
   }
 

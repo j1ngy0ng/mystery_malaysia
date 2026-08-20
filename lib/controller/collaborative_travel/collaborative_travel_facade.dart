@@ -53,6 +53,8 @@ class CollaborativeTravelFacade extends ChangeNotifier
   @override
   Future<bool> remove(String memberId) => _controller.remove(memberId);
   @override
+  Future<bool> leave() => _controller.leave();
+  @override
   Future<bool> toggleReady() => _controller.toggleReady();
   @override
   Future<bool> start() => _controller.start();

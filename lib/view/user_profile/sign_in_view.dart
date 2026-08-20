@@ -56,6 +56,7 @@ class _SignInViewState extends State<SignInView> {
                   TextField(
                     controller: email,
                     keyboardType: TextInputType.emailAddress,
+                    onChanged: facade.validateEmail,
                     decoration: InputDecoration(
                       labelText: 'Email',
                       prefixIcon: const Icon(Icons.mail_outline_rounded),
@@ -66,6 +67,7 @@ class _SignInViewState extends State<SignInView> {
                   TextField(
                     controller: password,
                     obscureText: facade.obscurePassword,
+                    onChanged: facade.validateSignInPassword,
                     decoration: InputDecoration(
                       labelText: 'Password',
                       prefixIcon: const Icon(Icons.lock_outline_rounded),
@@ -109,7 +111,7 @@ class _SignInViewState extends State<SignInView> {
                   SizedBox(
                     width: double.infinity,
                     child: FilledButton(
-                      onPressed: facade.isLoading
+                      onPressed: facade.isLoading || !facade.canSignIn
                           ? null
                           : () async {
                               final signedIn = await facade.signIn(
@@ -168,58 +170,72 @@ class _SignInViewState extends State<SignInView> {
 
   void _showResetSheet(BuildContext context) {
     final resetEmail = TextEditingController(text: email.text);
+    facade.validateResetEmail(resetEmail.text);
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (sheetContext) => Padding(
-        padding: EdgeInsets.fromLTRB(
-          24,
-          24,
-          24,
-          MediaQuery.viewInsetsOf(sheetContext).bottom + 28,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Reset your password',
-              style: Theme.of(sheetContext).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 8),
-            const Text('We will send a secure reset link to your email.'),
-            const SizedBox(height: 20),
-            TextField(
-              controller: resetEmail,
-              keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(
-                labelText: 'Registered email',
-                prefixIcon: Icon(Icons.mail_outline_rounded),
+      builder: (sheetContext) => AnimatedBuilder(
+        animation: facade,
+        builder: (sheetContext, _) => Padding(
+          padding: EdgeInsets.fromLTRB(
+            24,
+            24,
+            24,
+            MediaQuery.viewInsetsOf(sheetContext).bottom + 28,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Reset your password',
+                style: Theme.of(sheetContext).textTheme.titleLarge,
               ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: () async {
-                  final sent = await facade.sendPasswordReset(resetEmail.text);
-                  if (!sheetContext.mounted) return;
-                  Navigator.pop(sheetContext);
-                  if (!context.mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        sent
-                            ? 'Password reset email sent.'
-                            : facade.error ?? 'Could not send reset email.',
-                      ),
-                    ),
-                  );
-                },
-                child: const Text('Send reset link'),
+              const SizedBox(height: 8),
+              const Text('We will send a secure reset link to your email.'),
+              const SizedBox(height: 20),
+              TextField(
+                controller: resetEmail,
+                keyboardType: TextInputType.emailAddress,
+                onChanged: facade.validateResetEmail,
+                decoration: InputDecoration(
+                  labelText: 'Registered email',
+                  prefixIcon: const Icon(Icons.mail_outline_rounded),
+                  errorText: facade.resetEmailError,
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: facade.isLoading || !facade.canSendPasswordReset
+                      ? null
+                      : () async {
+                          final sent = await facade.sendPasswordReset(
+                            resetEmail.text,
+                          );
+                          if (!sent || !sheetContext.mounted) return;
+                          Navigator.pop(sheetContext);
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Password reset email sent.'),
+                            ),
+                          );
+                        },
+                  child: facade.isLoading
+                      ? const SizedBox.square(
+                          dimension: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text('Send reset link'),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

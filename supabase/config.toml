@@ -8,13 +8,17 @@ additional_redirect_urls = ["com.mysterymalaysia://login-callback/**"]
 enroll_enabled = true
 verify_enabled = true
 
+[auth.hook.before_user_created]
+enabled = true
+uri = "pg-functions://postgres/public/enforce_auth_user_limit"
+
 [auth.email]
 enable_confirmations = true
 max_frequency = "1m0s"
 otp_length = 8
 
-# Hosted Supabase requires custom SMTP or a paid plan before this template can
-# be activated. The ready-to-use design is in templates/confirmation.html.
-
 [functions.generate-mission]
 verify_jwt = true
+
+[functions.send-email]
+verify_jwt = false

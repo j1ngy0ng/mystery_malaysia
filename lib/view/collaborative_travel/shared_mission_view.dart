@@ -201,6 +201,19 @@ class _SharedMissionViewState extends State<SharedMissionView> {
                   ],
                 ),
               ),
+              if (!facade.isHost &&
+                  const [
+                    'waiting',
+                    'active',
+                    'paused',
+                  ].contains(facade.status)) ...[
+                const SizedBox(height: 16),
+                OutlinedButton.icon(
+                  onPressed: facade.isLoading ? null : _confirmLeave,
+                  icon: const Icon(Icons.logout_rounded),
+                  label: const Text('Quit shared mission'),
+                ),
+              ],
             ],
           ),
         );
@@ -348,6 +361,33 @@ class _SharedMissionViewState extends State<SharedMissionView> {
               if (removed && context.mounted) Navigator.pop(context);
             },
             child: const Text('Remove member'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmLeave() {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Quit this shared mission?'),
+        content: const Text(
+          'You will leave the travel crew and lose access to its shared progress.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Stay with crew'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final left = await facade.leave();
+              if (!left || !dialogContext.mounted) return;
+              Navigator.pop(dialogContext);
+              if (mounted) Navigator.pop(context, true);
+            },
+            child: const Text('Quit mission'),
           ),
         ],
       ),

@@ -1,4 +1,5 @@
 import { withSupabase } from "npm:@supabase/server@1.4.1";
+import { pauseCurrentMission } from "../_shared/mission-lifecycle.ts";
 
 type StartMissionInput = {
   action?: "select" | "start";
@@ -37,22 +38,6 @@ export default {
           status: 400,
         });
       }
-      const { data: current, error: currentError } = await admin
-        .from("user_current_missions")
-        .select("session_id")
-        .eq("user_id", userId)
-        .maybeSingle();
-      if (currentError) throw currentError;
-      if (current) {
-        return Response.json(
-          {
-            message:
-              "Finish, pause or abandon your current mission before starting another.",
-          },
-          { status: 409 },
-        );
-      }
-
       const { data: recommendation, error: recommendationError } = await admin
         .from("mission_recommendations")
         .select("id,request_id,title")
@@ -213,9 +198,12 @@ export default {
         );
       if (revealError) throw revealError;
 
+      await pauseCurrentMission(admin, userId, sessionId);
       const { error: currentMissionError } = await admin
         .from("user_current_missions")
-        .insert({ user_id: userId, session_id: sessionId });
+        .upsert({ user_id: userId, session_id: sessionId }, {
+          onConflict: "user_id",
+        });
       if (currentMissionError) throw currentMissionError;
 
       const { error: activateError } = await admin
@@ -318,6 +306,13 @@ async function startSelectedMission(
       message: "Shared missions must be started from their lobby.",
     }, { status: 409 });
   }
+  await pauseCurrentMission(admin, userId, sessionId);
+  const { error: currentMissionError } = await admin
+    .from("user_current_missions")
+    .upsert({ user_id: userId, session_id: sessionId }, {
+      onConflict: "user_id",
+    });
+  if (currentMissionError) throw currentMissionError;
   if (session.status === "active") {
     return Response.json({ session_id: sessionId, status: "active" });
   }
