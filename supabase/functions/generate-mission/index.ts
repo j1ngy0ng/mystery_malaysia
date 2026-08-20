@@ -998,7 +998,7 @@ async function cacheEligiblePlaces({
       clue_xp_reward: 0,
       hint_xp_cost: 0,
       ai_model: null,
-      prompt_version: "places-specific-location-v2",
+      prompt_version: "places-specific-no-address-v3",
     };
   });
   const { error: clueError } = await admin
@@ -1466,26 +1466,28 @@ function obviousDestinationClue(
     city?: string;
     state?: string;
     primary_type?: string;
-    formatted_address?: string;
   },
 ): string {
   const name = destination?.name?.trim() || "this destination";
   const type = friendlyPlaceType(destination?.primary_type);
   const area = destination?.city?.trim() || destination?.state?.trim() ||
     "your nearby area";
-  const address = destination?.formatted_address?.trim();
-  const initial = name[0]?.toUpperCase() || "?";
-  return `Find the ${type} in ${area} whose name starts with “${initial}”. ` +
-    (address
-      ? `Google lists it at ${address}.`
-      : "Look for its official entrance and matching place signage.");
+  const words = destinationNameWords(name);
+  const initials = words.map((word) => word[0].toUpperCase()).join(" • ");
+  const namePattern = words.length > 1
+    ? `Its ${words.length}-word official name has the initials “${initials}”.`
+    : `Its official name has ${[...name].length} characters, starts with “${
+      name[0].toUpperCase()
+    }” and ends with “${name.at(-1)?.toUpperCase()}”.`;
+  return `Seek a ${type} in ${area}. ${namePattern} ` +
+    "Follow the Hot & Cold signal and look for matching visitor signage.";
 }
 
 function additionalDestinationHint(
-  destination?: { name?: string; formatted_address?: string },
+  destination?: { name?: string },
 ): string {
   const name = destination?.name?.trim() || "";
-  const words = name.split(/\s+/).filter(Boolean);
+  const words = destinationNameWords(name);
   if (words.length > 1) {
     return `The destination name has ${words.length} words and ends with “${
       words.at(-1)
@@ -1494,10 +1496,15 @@ function additionalDestinationHint(
   return name
     ? `The destination name has ${[...name].length} characters and starts with “${
       name[0].toUpperCase()
-    }”.`
-    : `Check the Google-listed address: ${
-      destination?.formatted_address ?? "the nearby visitor area"
-    }.`;
+    }”. Look for its official visitor sign nearby.`
+    : "Look for the official visitor entrance as the Hot & Cold signal strengthens.";
+}
+
+function destinationNameWords(name: string): string[] {
+  return name
+    .split(/\s+/)
+    .map((word) => word.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, ""))
+    .filter(Boolean);
 }
 
 function roundScore(value: number): number {

@@ -789,8 +789,15 @@ class _DestinationGuideSheet extends StatelessWidget {
           const SizedBox(height: 22),
           FilledButton.icon(
             onPressed: () {
+              if (result.missionCompleted) {
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  '/home',
+                  (_) => false,
+                );
+                return;
+              }
               Navigator.pop(context);
-              if (result.missionCompleted) Navigator.pop(context);
             },
             icon: Icon(
               result.missionCompleted

@@ -86,6 +86,7 @@ abstract final class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: Colors.white.withValues(alpha: .92),
+        errorMaxLines: 4,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 18,
           vertical: 16,

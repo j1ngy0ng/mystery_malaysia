@@ -149,11 +149,7 @@ class _PassportViewState extends State<PassportView> {
               ],
             ),
           const SizedBox(height: 28),
-          SectionHeader(
-            title: 'Travel diary',
-            action: 'Open diary',
-            onAction: _openDiary,
-          ),
+          const SectionHeader(title: 'Travel diary'),
           const SizedBox(height: 10),
           if (facade.eligibleDiaryMissions.isNotEmpty) ...[
             for (final mission in facade.eligibleDiaryMissions)
