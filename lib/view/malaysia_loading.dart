@@ -5,6 +5,48 @@ import 'package:flutter/material.dart';
 import 'app_colors.dart';
 import 'app_spacing.dart';
 
+class MalaysiaLoadingBlocker extends StatelessWidget {
+  const MalaysiaLoadingBlocker({
+    required this.loading,
+    required this.child,
+    super.key,
+    this.message = 'Preparing your Malaysian mystery...',
+  });
+
+  final bool loading;
+  final Widget child;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) => PopScope(
+    canPop: !loading,
+    child: Stack(
+      children: [
+        AbsorbPointer(absorbing: loading, child: child),
+        if (loading)
+          Positioned.fill(
+            child: Material(
+              color: AppColors.ink.withValues(alpha: .42),
+              child: SafeArea(
+                child: LayoutBuilder(
+                  builder: (context, constraints) => SingleChildScrollView(
+                    padding: const EdgeInsets.all(24),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: constraints.maxHeight - 48,
+                      ),
+                      child: Center(child: MalaysiaLoading(message: message)),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    ),
+  );
+}
+
 class MalaysiaLoading extends StatefulWidget {
   const MalaysiaLoading({
     super.key,

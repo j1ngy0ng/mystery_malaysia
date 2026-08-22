@@ -50,157 +50,165 @@ class _MissionHistoryViewState extends State<MissionHistoryView> {
       body: AnimatedBuilder(
         animation: facade,
         builder: (context, _) {
-          return ListView(
-            padding: EdgeInsets.fromLTRB(20, 6, 20, widget.embedded ? 112 : 36),
-            children: [
-              Container(
-                padding: const EdgeInsets.all(22),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppColors.hibiscus, AppColors.purple],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+          return MalaysiaLoadingBlocker(
+            loading: facade.isLoading,
+            message: 'Tracing your journeys...',
+            child: ListView(
+              padding: EdgeInsets.fromLTRB(
+                20,
+                6,
+                20,
+                widget.embedded ? 112 : 36,
+              ),
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(22),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [AppColors.hibiscus, AppColors.purple],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.hibiscus.withValues(alpha: .2),
+                        blurRadius: 24,
+                        offset: const Offset(0, 11),
+                      ),
+                    ],
                   ),
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.hibiscus.withValues(alpha: .2),
-                      blurRadius: 24,
-                      offset: const Offset(0, 11),
-                    ),
-                  ],
-                ),
-                child: Stack(
-                  children: [
-                    Positioned(
-                      right: -24,
-                      bottom: -34,
-                      child: Icon(
-                        Icons.map_rounded,
-                        color: Colors.white.withValues(alpha: .1),
-                        size: 140,
-                      ),
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const StatusPill(
-                          label: 'Adventure archive',
-                          icon: Icons.auto_stories_rounded,
-                          color: AppColors.ink,
-                          background: AppColors.mango,
-                        ),
-                        const SizedBox(height: 17),
-                        Text(
-                          'Every adventure,\nin one place.',
-                          style: Theme.of(context).textTheme.headlineLarge
-                              ?.copyWith(color: Colors.white),
-                        ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Continue where you stopped or revisit a completed Malaysian mystery.',
-                          style: TextStyle(color: Colors.white70, height: 1.4),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 22),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: MissionHistoryFilter.values.map((filter) {
-                    final label = switch (filter) {
-                      MissionHistoryFilter.all => 'All',
-                      MissionHistoryFilter.active => 'Active',
-                      MissionHistoryFilter.paused => 'Paused',
-                      MissionHistoryFilter.completed => 'Completed',
-                    };
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: ChoiceChip(
-                        label: Text(label),
-                        selected: facade.filter == filter,
-                        onSelected: (_) => facade.selectFilter(filter),
-                        selectedColor: AppColors.paleTeal,
-                        side: BorderSide(
-                          color: facade.filter == filter
-                              ? AppColors.teal
-                              : AppColors.outline,
+                  child: Stack(
+                    children: [
+                      Positioned(
+                        right: -24,
+                        bottom: -34,
+                        child: Icon(
+                          Icons.map_rounded,
+                          color: Colors.white.withValues(alpha: .1),
+                          size: 140,
                         ),
                       ),
-                    );
-                  }).toList(),
-                ),
-              ),
-              const SizedBox(height: 18),
-              if (facade.isLoading)
-                const Center(
-                  child: MalaysiaLoading(message: 'Tracing your journeys...'),
-                )
-              else if (facade.error != null)
-                _HistoryMessage(
-                  message: facade.error!,
-                  action: 'Retry',
-                  onPressed: facade.load,
-                )
-              else if (facade.visibleMissions.isEmpty)
-                _HistoryMessage(
-                  message:
-                      'No missions here yet. Generate your first Malaysian mystery adventure.',
-                  action: 'Generate mission',
-                  onPressed: () =>
-                      Navigator.pushNamed(context, '/missions/request'),
-                ),
-              ...facade.visibleMissions.map(
-                (mission) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _MissionHistoryCard(
-                    mission: mission,
-                    onTap: () {
-                      if (mission.status == MissionStatus.waiting &&
-                          mission.isShared) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute<void>(
-                            builder: (_) => SharedMissionView(
-                              facade: AppDependencies.collaborativeTravel(
-                                sessionId: mission.sessionId,
-                              ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const StatusPill(
+                            label: 'Adventure archive',
+                            icon: Icons.auto_stories_rounded,
+                            color: AppColors.ink,
+                            background: AppColors.mango,
+                          ),
+                          const SizedBox(height: 17),
+                          Text(
+                            'Every adventure,\nin one place.',
+                            style: Theme.of(context).textTheme.headlineLarge
+                                ?.copyWith(color: Colors.white),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Continue where you stopped or revisit a completed Malaysian mystery.',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              height: 1.4,
                             ),
                           ),
-                        ).then((_) => facade.load());
-                      } else if (mission.status == MissionStatus.ready ||
-                          mission.status == MissionStatus.active ||
-                          mission.status == MissionStatus.paused) {
-                        final launch = mission.launch;
-                        if (launch != null) {
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 22),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: MissionHistoryFilter.values.map((filter) {
+                      final label = switch (filter) {
+                        MissionHistoryFilter.all => 'All',
+                        MissionHistoryFilter.active => 'Active',
+                        MissionHistoryFilter.paused => 'Paused',
+                        MissionHistoryFilter.completed => 'Completed',
+                      };
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
+                          label: Text(label),
+                          selected: facade.filter == filter,
+                          onSelected: (_) => facade.selectFilter(filter),
+                          selectedColor: AppColors.paleTeal,
+                          side: BorderSide(
+                            color: facade.filter == filter
+                                ? AppColors.teal
+                                : AppColors.outline,
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                if (facade.error != null)
+                  _HistoryMessage(
+                    message: facade.error!,
+                    action: 'Retry',
+                    onPressed: facade.load,
+                  )
+                else if (facade.visibleMissions.isEmpty)
+                  _HistoryMessage(
+                    message:
+                        'No missions here yet. Generate your first Malaysian mystery adventure.',
+                    action: 'Generate mission',
+                    onPressed: () =>
+                        Navigator.pushNamed(context, '/missions/request'),
+                  ),
+                ...facade.visibleMissions.map(
+                  (mission) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _MissionHistoryCard(
+                      mission: mission,
+                      onTap: () {
+                        if (mission.status == MissionStatus.waiting &&
+                            mission.isShared) {
                           Navigator.push(
                             context,
                             MaterialPageRoute<void>(
-                              builder: (_) => ActiveMissionView(
-                                facade: AppDependencies.activeMission(
-                                  launch: launch,
+                              builder: (_) => SharedMissionView(
+                                facade: AppDependencies.collaborativeTravel(
+                                  sessionId: mission.sessionId,
                                 ),
                               ),
                             ),
                           ).then((_) => facade.load());
-                        }
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Generate travel diaries from your Digital Passport.',
+                        } else if (mission.status == MissionStatus.ready ||
+                            mission.status == MissionStatus.active ||
+                            mission.status == MissionStatus.paused) {
+                          final launch = mission.launch;
+                          if (launch != null) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute<void>(
+                                builder: (_) => ActiveMissionView(
+                                  facade: AppDependencies.activeMission(
+                                    launch: launch,
+                                  ),
+                                ),
+                              ),
+                            ).then((_) => facade.load());
+                          }
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Generate travel diaries from your Digital Passport.',
+                              ),
                             ),
-                          ),
-                        );
-                      }
-                    },
+                          );
+                        }
+                      },
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           );
         },
       ),

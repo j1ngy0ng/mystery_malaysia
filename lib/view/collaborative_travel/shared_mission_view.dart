@@ -46,228 +46,241 @@ class _SharedMissionViewState extends State<SharedMissionView> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Shared mission lobby')),
-    body: AnimatedBuilder(
-      animation: facade,
-      builder: (context, _) {
-        if (facade.sessionId == null) {
-          return ListView(
-            padding: const EdgeInsets.all(24),
-            children: const [
-              Text('Generate a mission first, then choose to share it.'),
-              SizedBox(height: 20),
-              Text(
-                'Team locations are not shown. Each traveller’s GPS is checked only when they verify arrival at the hidden destination.',
-              ),
-            ],
-          );
-        }
-        return RefreshIndicator(
-          onRefresh: facade.loadLobby,
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 4, 20, 130),
-            children: [
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppColors.purple, AppColors.straits],
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: facade,
+    builder: (context, _) => MalaysiaLoadingBlocker(
+      loading: facade.isLoading,
+      message: 'Gathering your crew...',
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Shared mission lobby')),
+        body: AnimatedBuilder(
+          animation: facade,
+          builder: (context, _) {
+            if (facade.sessionId == null) {
+              return ListView(
+                padding: const EdgeInsets.all(24),
+                children: const [
+                  Text('Generate a mission first, then choose to share it.'),
+                  SizedBox(height: 20),
+                  Text(
+                    'Team locations are not shown. Each traveller’s GPS is checked only when they verify arrival at the hidden destination.',
                   ),
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    StatusPill(
-                      label: facade.status.replaceAll('_', ' '),
-                      icon: Icons.groups_rounded,
-                      color: AppColors.ink,
-                      background: AppColors.mango,
+                ],
+              );
+            }
+            return RefreshIndicator(
+              onRefresh: facade.loadLobby,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 130),
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [AppColors.purple, AppColors.straits],
+                      ),
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
                     ),
-                    const SizedBox(height: 14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        StatusPill(
+                          label: facade.status.replaceAll('_', ' '),
+                          icon: Icons.groups_rounded,
+                          color: AppColors.ink,
+                          background: AppColors.mango,
+                        ),
+                        const SizedBox(height: 14),
+                        Text(
+                          facade.title,
+                          style: Theme.of(context).textTheme.headlineMedium
+                              ?.copyWith(color: Colors.white),
+                        ),
+                        const SizedBox(height: 5),
+                        const Text(
+                          'The same hidden route, clues and progress are synchronised for accepted members.',
+                          style: TextStyle(color: Colors.white70, height: 1.4),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (facade.error != null) ...[
+                    const SizedBox(height: 12),
                     Text(
-                      facade.title,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.headlineMedium?.copyWith(color: Colors.white),
-                    ),
-                    const SizedBox(height: 5),
-                    const Text(
-                      'The same hidden route, clues and progress are synchronised for accepted members.',
-                      style: TextStyle(color: Colors.white70, height: 1.4),
+                      facade.error!,
+                      style: const TextStyle(color: AppColors.hibiscus),
                     ),
                   ],
-                ),
-              ),
-              if (facade.error != null) ...[
-                const SizedBox(height: 12),
-                Text(
-                  facade.error!,
-                  style: const TextStyle(color: AppColors.hibiscus),
-                ),
-              ],
-              const SizedBox(height: 22),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Your travel crew',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                  ),
-                  if (facade.isHost && facade.status == 'waiting')
-                    TextButton.icon(
-                      onPressed: () => _showInviteSheet(context),
-                      icon: const Icon(Icons.person_add_alt_1_rounded),
-                      label: const Text('Invite'),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              if (facade.isLoading && facade.participants.isEmpty)
-                const Center(
-                  child: MalaysiaLoading(message: 'Gathering your crew...'),
-                )
-              else
-                ...facade.participants.map(
-                  (participant) => _ParticipantTile(
-                    participant: participant,
-                    canRemove:
-                        facade.isHost &&
-                        const [
-                          'waiting',
-                          'active',
-                          'paused',
-                        ].contains(facade.status) &&
-                        !participant.isHost,
-                    onRemove: () => _confirmRemove(participant),
-                  ),
-                ),
-              if (facade.message != null) ...[
-                const SizedBox(height: 8),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 11,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.green.withValues(alpha: .12),
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  const SizedBox(height: 22),
+                  Row(
                     children: [
-                      const Icon(
-                        Icons.info_outline_rounded,
-                        size: 18,
-                        color: AppColors.green,
-                      ),
-                      const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          facade.message!,
-                          style: const TextStyle(
-                            color: AppColors.green,
-                            fontWeight: FontWeight.w700,
-                          ),
+                          'Your travel crew',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.titleLarge,
                         ),
                       ),
+                      if (facade.isHost && facade.status == 'waiting')
+                        TextButton.icon(
+                          onPressed: () => _showInviteSheet(context),
+                          icon: const Icon(Icons.person_add_alt_1_rounded),
+                          label: const Text('Invite'),
+                        ),
                     ],
                   ),
-                ),
-              ],
-              const SizedBox(height: 22),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.paleTeal,
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                ),
-                child: const Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(Icons.location_on_outlined, color: AppColors.teal),
-                    SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'Team locations are not shown. Each traveller’s GPS is checked only when they verify arrival at the hidden destination.',
-                        style: TextStyle(fontWeight: FontWeight.w700),
+                  const SizedBox(height: 8),
+                  if (facade.isLoading && facade.participants.isEmpty)
+                    const Center(
+                      child: MalaysiaLoading(message: 'Gathering your crew...'),
+                    )
+                  else
+                    ...facade.participants.map(
+                      (participant) => _ParticipantTile(
+                        participant: participant,
+                        canRemove:
+                            facade.isHost &&
+                            const [
+                              'waiting',
+                              'active',
+                              'paused',
+                            ].contains(facade.status) &&
+                            !participant.isHost,
+                        onRemove: () => _confirmRemove(participant),
+                      ),
+                    ),
+                  if (facade.message != null) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 11,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.green.withValues(alpha: .12),
+                        borderRadius: BorderRadius.circular(
+                          AppSpacing.radiusMd,
+                        ),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(
+                            Icons.info_outline_rounded,
+                            size: 18,
+                            color: AppColors.green,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              facade.message!,
+                              style: const TextStyle(
+                                color: AppColors.green,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
-                ),
-              ),
-              if (!facade.isHost &&
-                  const [
-                    'waiting',
-                    'active',
-                    'paused',
-                  ].contains(facade.status)) ...[
-                const SizedBox(height: 16),
-                OutlinedButton.icon(
-                  onPressed: facade.isLoading ? null : _confirmLeave,
-                  icon: const Icon(Icons.logout_rounded),
-                  label: const Text('Quit shared mission'),
-                ),
-              ],
-            ],
-          ),
-        );
-      },
-    ),
-    bottomNavigationBar: facade.sessionId == null
-        ? null
-        : SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 14),
-              child: AnimatedBuilder(
-                animation: facade,
-                builder: (context, _) {
-                  if (facade.status == 'active' || facade.status == 'paused') {
-                    return FilledButton.icon(
-                      onPressed: _openMission,
-                      icon: const Icon(Icons.explore_rounded),
-                      label: const Text('Open shared mission'),
-                    );
-                  }
-                  if (facade.status != 'waiting') {
-                    return const SizedBox.shrink();
-                  }
-                  return Row(
-                    children: [
-                      Expanded(
-                        child: FilledButton.icon(
-                          onPressed: facade.isLoading
-                              ? null
-                              : facade.toggleReady,
-                          icon: Icon(
-                            facade.isReady
-                                ? Icons.check_circle_rounded
-                                : Icons.how_to_reg_rounded,
-                          ),
-                          label: Text(facade.isReady ? 'Ready' : 'Mark ready'),
-                        ),
-                      ),
-                      if (facade.isHost) ...[
-                        const SizedBox(width: 10),
+                  const SizedBox(height: 22),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.paleTeal,
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                    ),
+                    child: const Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.location_on_outlined, color: AppColors.teal),
+                        SizedBox(width: 10),
                         Expanded(
-                          child: FilledButton.icon(
-                            onPressed: facade.isLoading ? null : facade.start,
-                            icon: const Icon(Icons.play_arrow_rounded),
-                            label: const Text('Start'),
+                          child: Text(
+                            'Team locations are not shown. Each traveller’s GPS is checked only when they verify arrival at the hidden destination.',
+                            style: TextStyle(fontWeight: FontWeight.w700),
                           ),
                         ),
                       ],
-                    ],
-                  );
-                },
+                    ),
+                  ),
+                  if (!facade.isHost &&
+                      const [
+                        'waiting',
+                        'active',
+                        'paused',
+                      ].contains(facade.status)) ...[
+                    const SizedBox(height: 16),
+                    OutlinedButton.icon(
+                      onPressed: facade.isLoading ? null : _confirmLeave,
+                      icon: const Icon(Icons.logout_rounded),
+                      label: const Text('Quit shared mission'),
+                    ),
+                  ],
+                ],
               ),
-            ),
-          ),
+            );
+          },
+        ),
+        bottomNavigationBar: facade.sessionId == null
+            ? null
+            : SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 14),
+                  child: AnimatedBuilder(
+                    animation: facade,
+                    builder: (context, _) {
+                      if (facade.status == 'active' ||
+                          facade.status == 'paused') {
+                        return FilledButton.icon(
+                          onPressed: _openMission,
+                          icon: const Icon(Icons.explore_rounded),
+                          label: const Text('Open shared mission'),
+                        );
+                      }
+                      if (facade.status != 'waiting') {
+                        return const SizedBox.shrink();
+                      }
+                      return Row(
+                        children: [
+                          Expanded(
+                            child: FilledButton.icon(
+                              onPressed: facade.isLoading
+                                  ? null
+                                  : facade.toggleReady,
+                              icon: Icon(
+                                facade.isReady
+                                    ? Icons.check_circle_rounded
+                                    : Icons.how_to_reg_rounded,
+                              ),
+                              label: Text(
+                                facade.isReady ? 'Ready' : 'Mark ready',
+                              ),
+                            ),
+                          ),
+                          if (facade.isHost) ...[
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: FilledButton.icon(
+                                onPressed: facade.isLoading
+                                    ? null
+                                    : facade.start,
+                                icon: const Icon(Icons.play_arrow_rounded),
+                                label: const Text('Start'),
+                              ),
+                            ),
+                          ],
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ),
+      ),
+    ),
   );
 
   Future<void> _openMission() async {

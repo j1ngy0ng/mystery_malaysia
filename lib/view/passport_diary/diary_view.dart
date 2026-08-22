@@ -42,216 +42,219 @@ class _DiaryViewState extends State<DiaryView> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Travel diary')),
-    body: AnimatedBuilder(
-      animation: facade,
-      builder: (context, _) => ListView(
-        padding: const EdgeInsets.fromLTRB(20, 6, 20, 40),
-        children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: AppColors.paleHibiscus,
-              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: facade,
+    builder: (context, _) => MalaysiaLoadingBlocker(
+      loading: facade.isLoading,
+      message: 'Gathering your memories...',
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Travel diary')),
+        body: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 6, 20, 40),
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppColors.paleHibiscus,
+                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+              ),
+              child: Row(
+                children: [
+                  const Text('✍️', style: TextStyle(fontSize: 42)),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.sessionId == null
+                              ? 'Your memory book'
+                              : _isGroup
+                              ? 'Create your crew diary'
+                              : 'Create a verified memory',
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        Text(
+                          widget.sessionId == null
+                              ? 'Choose an eligible completed mission below.'
+                              : _isGroup
+                              ? 'Every member contributes before the host confirms one shared AI diary.'
+                              : 'Submit your reflection first, then ask AI to shape the diary.',
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-            child: Row(
-              children: [
-                const Text('✍️', style: TextStyle(fontSize: 42)),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.sessionId == null
-                            ? 'Your memory book'
-                            : _isGroup
-                            ? 'Create your crew diary'
-                            : 'Create a verified memory',
-                        style: Theme.of(context).textTheme.titleLarge,
+            if (widget.sessionId == null) ...[
+              const SizedBox(height: 24),
+              Text(
+                'Eligible completed missions',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 10),
+              if (!facade.isLoading && facade.eligibleDiaryMissions.isEmpty)
+                const Text(
+                  'No missions are waiting for a diary. Complete all three verified stops to unlock one.',
+                )
+              else
+                ...facade.eligibleDiaryMissions.map(
+                  (mission) => Card(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    child: ListTile(
+                      leading: Icon(
+                        mission.mode == 'collaborative'
+                            ? Icons.groups_rounded
+                            : Icons.explore_rounded,
+                        color: AppColors.teal,
                       ),
-                      Text(
-                        widget.sessionId == null
-                            ? 'Choose an eligible completed mission below.'
-                            : _isGroup
-                            ? 'Every member contributes before the host confirms one shared AI diary.'
-                            : 'Submit your reflection first, then ask AI to shape the diary.',
-                      ),
-                    ],
+                      title: Text(mission.title),
+                      subtitle: const Text('Ready for your reflection'),
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: () async {
+                        await Navigator.pushNamed(
+                          context,
+                          '/diary',
+                          arguments: mission.sessionId,
+                        );
+                        if (mounted) await facade.load();
+                      },
+                    ),
                   ),
                 ),
-              ],
-            ),
-          ),
-          if (widget.sessionId == null) ...[
-            const SizedBox(height: 24),
-            Text(
-              'Eligible completed missions',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 10),
-            if (!facade.isLoading && facade.eligibleDiaryMissions.isEmpty)
-              const Text(
-                'No missions are waiting for a diary. Complete all three verified stops to unlock one.',
-              )
-            else
-              ...facade.eligibleDiaryMissions.map(
-                (mission) => Card(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  child: ListTile(
-                    leading: Icon(
-                      mission.mode == 'collaborative'
-                          ? Icons.groups_rounded
-                          : Icons.explore_rounded,
-                      color: AppColors.teal,
+            ],
+            if (widget.sessionId != null && _isGroup) ..._groupDiarySection(),
+            if (widget.sessionId != null && !generated) ...[
+              if (!_isGroup) ...[
+                const SizedBox(height: 20),
+                if (!reflectionSubmitted) ...[
+                  TextField(
+                    controller: reflection,
+                    maxLines: 5,
+                    decoration: const InputDecoration(
+                      labelText: 'Your travel reflection',
+                      hintText:
+                          'Share feelings, memorable moments, keywords and what you learned...',
+                      alignLabelWithHint: true,
                     ),
-                    title: Text(mission.title),
-                    subtitle: const Text('Ready for your reflection'),
-                    trailing: const Icon(Icons.chevron_right_rounded),
-                    onTap: () async {
-                      await Navigator.pushNamed(
-                        context,
-                        '/diary',
-                        arguments: mission.sessionId,
-                      );
-                      if (mounted) await facade.load();
-                    },
                   ),
+                  const SizedBox(height: 12),
+                  FilledButton.icon(
+                    onPressed: facade.isLoading ? null : _submitReflection,
+                    icon: const Icon(Icons.check_circle_outline_rounded),
+                    label: const Text('Submit reflection'),
+                  ),
+                ] else ...[
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.paleTeal,
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.verified_rounded, color: AppColors.green),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Reflection submitted. You can now generate your AI travel diary.',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  FilledButton.icon(
+                    onPressed: facade.isLoading ? null : _generate,
+                    icon: const Icon(Icons.auto_awesome_rounded),
+                    label: const Text('Generate AI travel diary'),
+                  ),
+                ],
+              ],
+            ],
+            if (generated) ...[
+              const SizedBox(height: 20),
+              TextField(
+                controller: title,
+                decoration: const InputDecoration(labelText: 'Diary title'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: content,
+                minLines: 8,
+                maxLines: 16,
+                decoration: const InputDecoration(
+                  labelText: 'Review and edit your diary',
+                  alignLabelWithHint: true,
                 ),
               ),
-          ],
-          if (widget.sessionId != null && _isGroup) ..._groupDiarySection(),
-          if (widget.sessionId != null && !generated) ...[
-            if (!_isGroup) ...[
-              const SizedBox(height: 20),
-              if (!reflectionSubmitted) ...[
-                TextField(
-                  controller: reflection,
-                  maxLines: 5,
-                  decoration: const InputDecoration(
-                    labelText: 'Your travel reflection',
-                    hintText:
-                        'Share feelings, memorable moments, keywords and what you learned...',
-                    alignLabelWithHint: true,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                FilledButton.icon(
-                  onPressed: facade.isLoading ? null : _submitReflection,
-                  icon: const Icon(Icons.check_circle_outline_rounded),
-                  label: const Text('Submit reflection'),
-                ),
-              ] else ...[
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.paleTeal,
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                  ),
-                  child: const Row(
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: () => _copyDiary(title.text, content.text),
+                icon: const Icon(Icons.copy_rounded),
+                label: const Text('Copy diary for social media'),
+              ),
+              const SizedBox(height: 8),
+              FilledButton.icon(
+                onPressed: facade.isLoading ? null : _save,
+                icon: const Icon(Icons.save_outlined),
+                label: const Text('Save diary'),
+              ),
+            ],
+            if (facade.error != null) ...[
+              const SizedBox(height: 12),
+              Text(
+                facade.error!,
+                style: const TextStyle(color: AppColors.hibiscus),
+              ),
+            ],
+            const SizedBox(height: 30),
+            Text(
+              'Saved memories',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 12),
+            if (facade.memories.isEmpty)
+              const Text('No saved diaries yet.')
+            else
+              ...facade.memories.map(
+                (memory) => Card(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: ExpansionTile(
+                    leading: Text(
+                      memory.isShared ? '👥' : memory.emoji,
+                      style: const TextStyle(fontSize: 30),
+                    ),
+                    title: Text(memory.title),
+                    subtitle: Text(
+                      memory.isShared
+                          ? 'Shared with your travel crew • ${memory.date}'
+                          : memory.date,
+                    ),
                     children: [
-                      Icon(Icons.verified_rounded, color: AppColors.green),
-                      SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          'Reflection submitted. You can now generate your AI travel diary.',
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 18),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SelectableText(memory.summary),
+                            const SizedBox(height: 10),
+                            TextButton.icon(
+                              onPressed: () =>
+                                  _copyDiary(memory.title, memory.summary),
+                              icon: const Icon(Icons.copy_rounded),
+                              label: const Text('Copy for social media'),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 12),
-                FilledButton.icon(
-                  onPressed: facade.isLoading ? null : _generate,
-                  icon: const Icon(Icons.auto_awesome_rounded),
-                  label: const Text('Generate AI travel diary'),
-                ),
-              ],
-            ],
-          ],
-          if (generated) ...[
-            const SizedBox(height: 20),
-            TextField(
-              controller: title,
-              decoration: const InputDecoration(labelText: 'Diary title'),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: content,
-              minLines: 8,
-              maxLines: 16,
-              decoration: const InputDecoration(
-                labelText: 'Review and edit your diary',
-                alignLabelWithHint: true,
               ),
-            ),
-            const SizedBox(height: 12),
-            OutlinedButton.icon(
-              onPressed: () => _copyDiary(title.text, content.text),
-              icon: const Icon(Icons.copy_rounded),
-              label: const Text('Copy diary for social media'),
-            ),
-            const SizedBox(height: 8),
-            FilledButton.icon(
-              onPressed: facade.isLoading ? null : _save,
-              icon: const Icon(Icons.save_outlined),
-              label: const Text('Save diary'),
-            ),
           ],
-          if (facade.error != null) ...[
-            const SizedBox(height: 12),
-            Text(
-              facade.error!,
-              style: const TextStyle(color: AppColors.hibiscus),
-            ),
-          ],
-          const SizedBox(height: 30),
-          Text('Saved memories', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 12),
-          if (facade.isLoading && facade.memories.isEmpty)
-            const Center(
-              child: MalaysiaLoading(message: 'Gathering your memories...'),
-            )
-          else if (facade.memories.isEmpty)
-            const Text('No saved diaries yet.')
-          else
-            ...facade.memories.map(
-              (memory) => Card(
-                margin: const EdgeInsets.only(bottom: 12),
-                child: ExpansionTile(
-                  leading: Text(
-                    memory.isShared ? '👥' : memory.emoji,
-                    style: const TextStyle(fontSize: 30),
-                  ),
-                  title: Text(memory.title),
-                  subtitle: Text(
-                    memory.isShared
-                        ? 'Shared with your travel crew • ${memory.date}'
-                        : memory.date,
-                  ),
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 18),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SelectableText(memory.summary),
-                          const SizedBox(height: 10),
-                          TextButton.icon(
-                            onPressed: () =>
-                                _copyDiary(memory.title, memory.summary),
-                            icon: const Icon(Icons.copy_rounded),
-                            label: const Text('Copy for social media'),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-        ],
+        ),
       ),
     ),
   );

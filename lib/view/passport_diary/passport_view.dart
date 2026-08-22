@@ -38,173 +38,175 @@ class _PassportViewState extends State<PassportView> {
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: facade,
-      builder: (context, _) => ListView(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 110),
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Digital passport',
-                  style: Theme.of(context).textTheme.headlineLarge,
-                ),
-              ),
-              IconButton(
-                tooltip: 'Refresh passport',
-                onPressed: facade.isLoading ? null : facade.load,
-                icon: const Icon(Icons.refresh_rounded),
-              ),
-              const Text('🇲🇾', style: TextStyle(fontSize: 38)),
-            ],
-          ),
-          const SizedBox(height: 5),
-          Text(
-            'Every solved mystery leaves a story behind.',
-            style: Theme.of(context).textTheme.bodyLarge,
-          ),
-          const SizedBox(height: 20),
-          if (facade.isLoading)
-            const Center(
-              child: MalaysiaLoading(message: 'Opening your passport...'),
-            )
-          else if (facade.error != null)
-            Card(
-              child: ListTile(
-                title: Text(facade.error!),
-                trailing: TextButton(
-                  onPressed: facade.load,
-                  child: const Text('Retry'),
-                ),
-              ),
-            ),
-          const SectionHeader(title: 'Mission badges'),
-          const SizedBox(height: 4),
-          Text(
-            '${facade.stamps.length} pieces · ${facade.missionStamps.where((stamp) => stamp.complete).length} complete',
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-          const SizedBox(height: 10),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              mainAxisExtent: 190,
-            ),
-            itemCount: facade.missionStamps.length,
-            itemBuilder: (context, index) => _MissionStampCard(
-              stamp: facade.missionStamps[index],
-              onTap: () => _showStamp(facade.missionStamps[index]),
-            ),
-          ),
-          if (!facade.isLoading && facade.stamps.isEmpty)
-            const Text(
-              'No mission badges yet. Each GPS-verified destination adds one of three state badge pieces.',
-            ),
-          const SizedBox(height: 28),
-          const SectionHeader(title: 'Achievements'),
-          const SizedBox(height: 10),
-          SizedBox(
-            height: 190,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: facade.achievements.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 10),
-              itemBuilder: (context, index) =>
-                  _AchievementCard(achievement: facade.achievements[index]),
-            ),
-          ),
-          if (!facade.isLoading && facade.achievements.isEmpty)
-            const Text(
-              'No achievements yet. Complete all three stops to unlock First Steps; more badges unlock through destinations, states and shared missions.',
-            ),
-          const SizedBox(height: 28),
-          const SectionHeader(title: 'Travel statistics'),
-          const SizedBox(height: 10),
-          if (facade.progress != null)
+      builder: (context, _) => MalaysiaLoadingBlocker(
+        loading: facade.isLoading,
+        message: 'Opening your passport...',
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 110),
+          children: [
             Row(
               children: [
                 Expanded(
-                  child: _StatCard(
-                    label: 'Missions',
-                    value: facade.progress!.completedMissions,
+                  child: Text(
+                    'Digital passport',
+                    style: Theme.of(context).textTheme.headlineLarge,
                   ),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _StatCard(
-                    label: 'Destinations',
-                    value: facade.progress!.visitedDestinations,
-                  ),
+                IconButton(
+                  tooltip: 'Refresh passport',
+                  onPressed: facade.isLoading ? null : facade.load,
+                  icon: const Icon(Icons.refresh_rounded),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _StatCard(
-                    label: 'States',
-                    value: facade.progress!.exploredStates,
-                  ),
-                ),
+                const Text('🇲🇾', style: TextStyle(fontSize: 38)),
               ],
             ),
-          const SizedBox(height: 28),
-          const SectionHeader(title: 'Travel diary'),
-          const SizedBox(height: 10),
-          if (facade.eligibleDiaryMissions.isNotEmpty) ...[
-            for (final mission in facade.eligibleDiaryMissions)
+            const SizedBox(height: 5),
+            Text(
+              'Every solved mystery leaves a story behind.',
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
+            const SizedBox(height: 20),
+            if (facade.error != null)
               Card(
-                margin: const EdgeInsets.only(bottom: 10),
                 child: ListTile(
-                  leading: const CircleAvatar(
-                    backgroundColor: AppColors.paleMango,
-                    foregroundColor: AppColors.hibiscus,
-                    child: Icon(Icons.auto_stories_rounded),
+                  title: Text(facade.error!),
+                  trailing: TextButton(
+                    onPressed: facade.load,
+                    child: const Text('Retry'),
                   ),
-                  title: Text(mission.title),
-                  subtitle: Text(
-                    mission.mode == 'collaborative'
-                        ? 'Crew reflections needed for one shared diary'
-                        : 'Eligible for an AI travel diary',
-                  ),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () => _openDiaryFor(mission.sessionId),
                 ),
               ),
+            const SectionHeader(title: 'Mission badges'),
             const SizedBox(height: 4),
-          ],
-          Card(
-            child: InkWell(
-              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-              onTap: _openDiary,
-              child: Padding(
-                padding: const EdgeInsets.all(18),
-                child: Row(
-                  children: [
-                    const Text('📖', style: TextStyle(fontSize: 42)),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${facade.memories.length} AI-crafted memories',
-                            style: const TextStyle(fontWeight: FontWeight.w800),
-                          ),
-                          const SizedBox(height: 4),
-                          const Text(
-                            'Only eligible completed missions can become new diaries.',
-                          ),
-                        ],
-                      ),
+            Text(
+              '${facade.stamps.length} pieces · ${facade.missionStamps.where((stamp) => stamp.complete).length} complete',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 10),
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                mainAxisExtent: 190,
+              ),
+              itemCount: facade.missionStamps.length,
+              itemBuilder: (context, index) => _MissionStampCard(
+                stamp: facade.missionStamps[index],
+                onTap: () => _showStamp(facade.missionStamps[index]),
+              ),
+            ),
+            if (!facade.isLoading && facade.stamps.isEmpty)
+              const Text(
+                'No mission badges yet. Each GPS-verified destination adds one of three state badge pieces.',
+              ),
+            const SizedBox(height: 28),
+            const SectionHeader(title: 'Achievements'),
+            const SizedBox(height: 10),
+            SizedBox(
+              height: 190,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: facade.achievements.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 10),
+                itemBuilder: (context, index) =>
+                    _AchievementCard(achievement: facade.achievements[index]),
+              ),
+            ),
+            if (!facade.isLoading && facade.achievements.isEmpty)
+              const Text(
+                'No achievements yet. Complete all three stops to unlock First Steps; more badges unlock through destinations, states and shared missions.',
+              ),
+            const SizedBox(height: 28),
+            const SectionHeader(title: 'Travel statistics'),
+            const SizedBox(height: 10),
+            if (facade.progress != null)
+              Row(
+                children: [
+                  Expanded(
+                    child: _StatCard(
+                      label: 'Missions',
+                      value: facade.progress!.completedMissions,
                     ),
-                    const Icon(Icons.chevron_right_rounded),
-                  ],
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _StatCard(
+                      label: 'Destinations',
+                      value: facade.progress!.visitedDestinations,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _StatCard(
+                      label: 'States',
+                      value: facade.progress!.exploredStates,
+                    ),
+                  ),
+                ],
+              ),
+            const SizedBox(height: 28),
+            const SectionHeader(title: 'Travel diary'),
+            const SizedBox(height: 10),
+            if (facade.eligibleDiaryMissions.isNotEmpty) ...[
+              for (final mission in facade.eligibleDiaryMissions)
+                Card(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  child: ListTile(
+                    leading: const CircleAvatar(
+                      backgroundColor: AppColors.paleMango,
+                      foregroundColor: AppColors.hibiscus,
+                      child: Icon(Icons.auto_stories_rounded),
+                    ),
+                    title: Text(mission.title),
+                    subtitle: Text(
+                      mission.mode == 'collaborative'
+                          ? 'Crew reflections needed for one shared diary'
+                          : 'Eligible for an AI travel diary',
+                    ),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () => _openDiaryFor(mission.sessionId),
+                  ),
+                ),
+              const SizedBox(height: 4),
+            ],
+            Card(
+              child: InkWell(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                onTap: _openDiary,
+                child: Padding(
+                  padding: const EdgeInsets.all(18),
+                  child: Row(
+                    children: [
+                      const Text('📖', style: TextStyle(fontSize: 42)),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${facade.memories.length} AI-crafted memories',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            const Text(
+                              'Only eligible completed missions can become new diaries.',
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right_rounded),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

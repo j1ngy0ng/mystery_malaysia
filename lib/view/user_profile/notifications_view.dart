@@ -33,59 +33,51 @@ class _NotificationsViewState extends State<NotificationsView> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: const Text('Notifications'),
-      actions: [
-        AnimatedBuilder(
-          animation: facade,
-          builder: (context, _) => TextButton(
-            onPressed: facade.unreadCount == 0 ? null : facade.markAllRead,
-            child: const Text('Mark all read'),
-          ),
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: facade,
+    builder: (context, _) => MalaysiaLoadingBlocker(
+      loading: facade.isLoading,
+      message: 'Checking your travel messages...',
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Notifications'),
+          actions: [
+            TextButton(
+              onPressed: facade.unreadCount == 0 ? null : facade.markAllRead,
+              child: const Text('Mark all read'),
+            ),
+          ],
         ),
-      ],
-    ),
-    body: MalaysiaBackdrop(
-      child: AnimatedBuilder(
-        animation: facade,
-        builder: (context, _) => RefreshIndicator(
-          onRefresh: facade.load,
-          child: ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
-            children: [
-              if (facade.isLoading && facade.notifications.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.only(top: 80),
-                  child: Center(
-                    child: MalaysiaLoading(
-                      message: 'Checking your travel messages...',
+        body: MalaysiaBackdrop(
+          child: RefreshIndicator(
+            onRefresh: facade.load,
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
+              children: [
+                if (facade.error != null && facade.notifications.isEmpty)
+                  _MessageCard(
+                    icon: Icons.cloud_off_rounded,
+                    message: facade.error!,
+                  )
+                else if (facade.notifications.isEmpty)
+                  const _MessageCard(
+                    icon: Icons.notifications_none_rounded,
+                    message: 'No notifications yet.',
+                  )
+                else ...[
+                  if (facade.error != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Text(
+                        facade.error!,
+                        style: const TextStyle(color: AppColors.hibiscus),
+                      ),
                     ),
-                  ),
-                )
-              else if (facade.error != null && facade.notifications.isEmpty)
-                _MessageCard(
-                  icon: Icons.cloud_off_rounded,
-                  message: facade.error!,
-                )
-              else if (facade.notifications.isEmpty)
-                const _MessageCard(
-                  icon: Icons.notifications_none_rounded,
-                  message: 'No notifications yet.',
-                )
-              else ...[
-                if (facade.error != null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: Text(
-                      facade.error!,
-                      style: const TextStyle(color: AppColors.hibiscus),
-                    ),
-                  ),
-                ...facade.notifications.map(_notificationCard),
+                  ...facade.notifications.map(_notificationCard),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),

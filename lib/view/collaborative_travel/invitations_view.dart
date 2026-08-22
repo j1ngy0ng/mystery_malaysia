@@ -38,57 +38,56 @@ class _InvitationsViewState extends State<InvitationsView> {
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
     animation: facade,
-    builder: (context, _) => RefreshIndicator(
-      onRefresh: facade.loadOverview,
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 110),
-        children: [
-          const _CrewHero(),
-          if (facade.isLoading) ...[
-            const SizedBox(height: 20),
-            const Center(
-              child: MalaysiaLoading(message: 'Checking shared missions...'),
+    builder: (context, _) => MalaysiaLoadingBlocker(
+      loading: facade.isLoading,
+      message: 'Checking shared missions...',
+      child: RefreshIndicator(
+        onRefresh: facade.loadOverview,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 110),
+          children: [
+            const _CrewHero(),
+            if (facade.error != null) ...[
+              const SizedBox(height: 16),
+              Text(
+                facade.error!,
+                style: const TextStyle(color: AppColors.hibiscus),
+              ),
+            ],
+            const SizedBox(height: 22),
+            const SectionHeader(title: 'Your shared missions'),
+            const SizedBox(height: 10),
+            if (!facade.isLoading && facade.sessions.isEmpty)
+              _CrewEmptyState(
+                icon: Icons.group_add_rounded,
+                title: 'Your crew starts here',
+                message:
+                    'Generate a mystery, choose shared mission, then invite travellers by email.',
+                action: 'Create a shared mission',
+                onTap: () => Navigator.pushNamed(context, '/missions/request'),
+              )
+            else
+              ...facade.sessions.map(_sessionCard),
+            const SizedBox(height: 26),
+            const SectionHeader(title: 'Mission invitations'),
+            const SizedBox(height: 10),
+            if (!facade.isLoading && facade.invitations.isEmpty)
+              const _CrewEmptyState(
+                icon: Icons.mark_email_read_outlined,
+                title: 'You are all caught up',
+                message: 'New mission invitations will appear here.',
+              )
+            else
+              ...facade.invitations.map(_invitationCard),
+            const SizedBox(height: 18),
+            OutlinedButton.icon(
+              onPressed: () =>
+                  Navigator.pushNamed(context, '/missions/request'),
+              icon: const Icon(Icons.group_add_outlined),
+              label: const Text('Generate a mission to share'),
             ),
           ],
-          if (facade.error != null) ...[
-            const SizedBox(height: 16),
-            Text(
-              facade.error!,
-              style: const TextStyle(color: AppColors.hibiscus),
-            ),
-          ],
-          const SizedBox(height: 22),
-          const SectionHeader(title: 'Your shared missions'),
-          const SizedBox(height: 10),
-          if (!facade.isLoading && facade.sessions.isEmpty)
-            _CrewEmptyState(
-              icon: Icons.group_add_rounded,
-              title: 'Your crew starts here',
-              message:
-                  'Generate a mystery, choose shared mission, then invite travellers by email.',
-              action: 'Create a shared mission',
-              onTap: () => Navigator.pushNamed(context, '/missions/request'),
-            )
-          else
-            ...facade.sessions.map(_sessionCard),
-          const SizedBox(height: 26),
-          const SectionHeader(title: 'Mission invitations'),
-          const SizedBox(height: 10),
-          if (!facade.isLoading && facade.invitations.isEmpty)
-            const _CrewEmptyState(
-              icon: Icons.mark_email_read_outlined,
-              title: 'You are all caught up',
-              message: 'New mission invitations will appear here.',
-            )
-          else
-            ...facade.invitations.map(_invitationCard),
-          const SizedBox(height: 18),
-          OutlinedButton.icon(
-            onPressed: () => Navigator.pushNamed(context, '/missions/request'),
-            icon: const Icon(Icons.group_add_outlined),
-            label: const Text('Generate a mission to share'),
-          ),
-        ],
+        ),
       ),
     ),
   );
