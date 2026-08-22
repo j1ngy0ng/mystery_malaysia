@@ -99,6 +99,35 @@ void main() {
     expect(missionBadgeCode('Unknown'), 'MYS');
   });
 
+  test('treats Kuala Lumpur state aliases as one mission badge', () {
+    const stamp = MissionStamp(
+      id: 'mission-kl',
+      pieces: [
+        PassportStamp(
+          place: 'Stop one',
+          state: 'Kuala Lumpur',
+          emoji: '',
+          earned: true,
+        ),
+        PassportStamp(
+          place: 'Stop two',
+          state: 'Wilayah Persekutuan Kuala Lumpur',
+          emoji: '',
+          earned: true,
+        ),
+        PassportStamp(
+          place: 'Stop three',
+          state: 'Federal Territory of Kuala Lumpur',
+          emoji: '',
+          earned: true,
+        ),
+      ],
+    );
+
+    expect(stamp.state, 'Kuala Lumpur');
+    expect(missionBadgeCode(stamp.state), 'KUL');
+  });
+
   test('parses crew reflections and a participant-visible shared diary', () {
     final state = GroupDiaryState.fromJson({
       'is_host': true,

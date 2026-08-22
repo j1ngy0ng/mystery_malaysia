@@ -490,7 +490,16 @@ class _ActiveMissionViewState extends State<ActiveMissionView> {
       return;
     }
     final result = await facade.refreshLocation();
-    if (!mounted || result == null) return;
+    if (!mounted) return;
+    if (result == null) {
+      // In a shared mission, another member may verify the final arrival.
+      // The refresh then syncs this session to completed without producing an
+      // arrival result on this device, so close the stale active-mission route.
+      if (facade.session.status == MissionStatus.completed) {
+        Navigator.pushNamedAndRemoveUntil(context, '/home', (_) => false);
+      }
+      return;
+    }
     arrivalSheetOpen = true;
     await _showDestinationGuide(result);
     arrivalSheetOpen = false;

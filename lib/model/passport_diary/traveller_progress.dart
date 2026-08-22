@@ -44,8 +44,13 @@ class MissionStamp {
   bool get earned => earnedPieces > 0;
   bool get complete => earnedPieces == 3;
   String get state {
-    final states = pieces.map((piece) => piece.state).toSet();
-    return states.length == 1 ? states.first : 'Malaysia';
+    if (pieces.isEmpty) return 'Malaysia';
+    final badgeCodes = pieces
+        .map((piece) => missionBadgeCode(piece.state))
+        .toSet();
+    return badgeCodes.length == 1 && badgeCodes.single != 'MYS'
+        ? pieces.first.state
+        : 'Malaysia';
   }
 
   String get name {
