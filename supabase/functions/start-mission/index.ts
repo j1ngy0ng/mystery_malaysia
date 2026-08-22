@@ -27,6 +27,7 @@ export default {
     }
     const admin = context.supabaseAdmin;
     let sessionId: string | null = null;
+    let selectedRecommendationId: string | null = null;
     try {
       if (input.action === "start") {
         return await startSelectedMission(admin, userId, input.session_id);
@@ -38,6 +39,7 @@ export default {
           status: 400,
         });
       }
+      selectedRecommendationId = recommendationId;
       const { data: recommendation, error: recommendationError } = await admin
         .from("mission_recommendations")
         .select("id,request_id,title")
@@ -77,6 +79,22 @@ export default {
       }
 
       const destinationIds = stops.map((stop) => stop.destination_id);
+      const reserved = await reserveSelectedDestinations({
+        admin,
+        destinationIds,
+        userId,
+        requestId: recommendation.request_id,
+        recommendationId,
+      });
+      if (!reserved) {
+        return Response.json(
+          {
+            message:
+              "One of these destinations has just reached its visitor capacity. Choose another mission or generate again.",
+          },
+          { status: 409 },
+        );
+      }
       const [{ data: destinations, error: destinationsError }, {
         data: clues,
         error: cluesError,
@@ -264,6 +282,9 @@ export default {
       if (sessionId) {
         await admin.from("mission_sessions").delete().eq("id", sessionId);
       }
+      if (selectedRecommendationId) {
+        await releaseReservedDestinations(admin, selectedRecommendationId);
+      }
       console.error("Start mission failed:", safeMessage(error));
       return Response.json({ message: "The mission could not be started." }, {
         status: 500,
@@ -271,6 +292,63 @@ export default {
     }
   }),
 };
+
+async function reserveSelectedDestinations({
+  admin,
+  destinationIds,
+  userId,
+  requestId,
+  recommendationId,
+}: {
+  admin: any;
+  destinationIds: string[];
+  userId: string;
+  requestId: string;
+  recommendationId: string;
+}): Promise<boolean> {
+  const { data: existing, error: existingError } = await admin
+    .from("destination_allocations")
+    .select("destination_id")
+    .eq("recommendation_id", recommendationId)
+    .eq("user_id", userId)
+    .in("status", ["reserved", "active"]);
+  if (existingError) throw existingError;
+  const alreadyReserved = new Set(
+    (existing ?? []).map((row: { destination_id: string }) =>
+      row.destination_id
+    ),
+  );
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+
+  for (const destinationId of destinationIds) {
+    if (alreadyReserved.has(destinationId)) continue;
+    const { data, error } = await admin.rpc("reserve_destination_capacity", {
+      p_destination_id: destinationId,
+      p_user_id: userId,
+      p_request_id: requestId,
+      p_recommendation_id: recommendationId,
+      p_expires_at: expiresAt,
+    });
+    if (error) throw error;
+    if (!data) {
+      await releaseReservedDestinations(admin, recommendationId);
+      return false;
+    }
+  }
+  return true;
+}
+
+async function releaseReservedDestinations(
+  admin: any,
+  recommendationId: string,
+): Promise<void> {
+  const { error } = await admin
+    .from("destination_allocations")
+    .update({ status: "released", released_at: new Date().toISOString() })
+    .eq("recommendation_id", recommendationId)
+    .eq("status", "reserved");
+  if (error) throw error;
+}
 
 async function startSelectedMission(
   admin: any,

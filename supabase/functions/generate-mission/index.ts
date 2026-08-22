@@ -240,7 +240,7 @@ export default {
       });
       const candidates = discovery.candidates;
 
-      if (candidates.length < STOPS_PER_MISSION * MISSION_OPTIONS) {
+      if (candidates.length < STOPS_PER_MISSION) {
         await admin
           .from("mission_requests")
           .update({ status: "no_match" })
@@ -250,7 +250,7 @@ export default {
           recommendations: [],
           discovery_mode: discovery.mode,
           message:
-            "Fewer than nine new tourist-suitable destinations were found nearby. Try another area or a larger distance.",
+            "Fewer than three new tourist-suitable destinations were found nearby. Try another area or a larger distance.",
         });
       }
 
@@ -322,36 +322,17 @@ export default {
           .insert(stopRows);
         if (stopError) throw stopError;
 
-        const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
-        const reserved = await reserveRecommendationDestinations({
-          admin,
-          destinationIds: destination_ids,
-          userId,
-          requestId,
-          recommendationId: saved.id,
-          expiresAt,
-        });
-        if (!reserved) {
-          // Another request filled one venue while this route was being saved.
-          // Release this route's partial reservations and try the next choice.
-          await releaseRecommendationReservations(admin, saved.id);
-          await admin
-            .from("mission_recommendations")
-            .delete()
-            .eq("id", saved.id);
-          continue;
-        }
-
         await admin.from("recommendation_events").insert({
           request_id: requestId,
           recommendation_id: saved.id,
           event_type: "generated",
           ai_model: geminiResult.model,
-          prompt_version: "mission-v4-three-stops",
+          prompt_version: "mission-v5-reusable-preview-stops",
           payload: {
             candidate_count: candidates.length,
             discovery_mode: discovery.mode,
-            reservation_expires_at: expiresAt,
+            reused_between_options: candidates.length <
+              STOPS_PER_MISSION * MISSION_OPTIONS,
           },
         });
 
@@ -395,8 +376,7 @@ export default {
           request_id: requestId,
           recommendations: [],
           discovery_mode: discovery.mode,
-          message:
-            "Those destinations were just assigned to other explorers. Generate again for a fresh route.",
+          message: "Three complete mission choices could not be prepared.",
         });
       }
 
@@ -427,7 +407,7 @@ export default {
           request_id: requestId,
           event_type: "failed",
           ai_model: Deno.env.get("GEMINI_MODEL") ?? "automatic-fallback",
-          prompt_version: "mission-v4-three-stops",
+          prompt_version: "mission-v5-reusable-preview-stops",
           payload: { reason },
         });
       }
@@ -521,53 +501,6 @@ async function loadFullDestinationIds(
       )
       .map((item: { id: string }) => item.id),
   );
-}
-
-async function reserveRecommendationDestinations({
-  admin,
-  destinationIds,
-  userId,
-  requestId,
-  recommendationId,
-  expiresAt,
-}: {
-  admin: any;
-  destinationIds: string[];
-  userId: string;
-  requestId: string;
-  recommendationId: string;
-  expiresAt: string;
-}): Promise<boolean> {
-  for (const destinationId of destinationIds) {
-    const { data, error } = await admin.rpc(
-      "reserve_destination_capacity",
-      {
-        p_destination_id: destinationId,
-        p_user_id: userId,
-        p_request_id: requestId,
-        p_recommendation_id: recommendationId,
-        p_expires_at: expiresAt,
-      },
-    );
-    if (error) throw error;
-    if (!data) return false;
-  }
-  return true;
-}
-
-async function releaseRecommendationReservations(
-  admin: any,
-  recommendationId: string,
-): Promise<void> {
-  const { error } = await admin
-    .from("destination_allocations")
-    .update({
-      status: "released",
-      released_at: new Date().toISOString(),
-    })
-    .eq("recommendation_id", recommendationId)
-    .eq("status", "reserved");
-  if (error) throw error;
 }
 
 async function discoverCandidates({
@@ -1107,7 +1040,9 @@ async function callGemini({
     "Choose only destination IDs from the supplied candidate list.",
     "Never invent an ID. Do not reveal destination names in titles, hooks, or explanations.",
     `Create exactly ${MISSION_OPTIONS} varied recommendations with exactly ${STOPS_PER_MISSION} unique stops each.`,
-    "Use nine different destination IDs across the full recommendation list; do not reuse a destination between mission choices.",
+    candidates.length >= STOPS_PER_MISSION * MISSION_OPTIONS
+      ? "Use nine different destination IDs across the full recommendation list; do not reuse a destination between mission choices."
+      : `Only ${candidates.length} valid destinations are available. Reuse destination IDs between mission choices only as needed, maximize variety, and never repeat a destination inside the same mission.`,
     `User constraints: ${JSON.stringify({
       available_minutes: input.available_minutes,
       budget_myr: input.budget_myr,
@@ -1533,23 +1468,39 @@ function deterministicJitter(value: string): number {
   return ((hash >>> 0) / 4294967295) * 0.12;
 }
 
-function validateRecommendations(
+export function validateRecommendations(
   generated: GeneratedRecommendation[],
   candidates: DestinationCandidate[],
   input: MissionInput,
 ): GeneratedRecommendation[] {
   const allowedIds = new Set(candidates.map((candidate) => candidate.id));
-  const globallyUsedIds = new Set<string>();
+  const candidateOrder = new Map(
+    candidates.map((candidate, index) => [candidate.id, index]),
+  );
+  const usageCounts = new Map<string, number>();
   const results: GeneratedRecommendation[] = [];
 
   for (const item of generated.slice(0, MISSION_OPTIONS)) {
     if (!item || typeof item !== "object") continue;
-    const destinationIds = [...new Set(item.destination_ids ?? [])]
-      .filter((id) => allowedIds.has(id))
-      .filter((id) => !globallyUsedIds.has(id))
+    const requestedIds = [...new Set(item.destination_ids ?? [])]
+      .filter((id) => allowedIds.has(id));
+    const requestedOrder = new Map(
+      requestedIds.map((id, index) => [id, index]),
+    );
+    const destinationIds = candidates
+      .map((candidate) => candidate.id)
+      .sort((left, right) =>
+        (usageCounts.get(left) ?? 0) - (usageCounts.get(right) ?? 0) ||
+        Number(!requestedOrder.has(left)) - Number(!requestedOrder.has(right)) ||
+        (requestedOrder.get(left) ?? Number.MAX_SAFE_INTEGER) -
+          (requestedOrder.get(right) ?? Number.MAX_SAFE_INTEGER) ||
+        (candidateOrder.get(left) ?? 0) - (candidateOrder.get(right) ?? 0)
+      )
       .slice(0, STOPS_PER_MISSION);
     if (destinationIds.length !== STOPS_PER_MISSION) continue;
-    destinationIds.forEach((id) => globallyUsedIds.add(id));
+    destinationIds.forEach((id) =>
+      usageCounts.set(id, (usageCounts.get(id) ?? 0) + 1)
+    );
 
     results.push({
       title: cleanText(item.title, 80, "Mystery Malaysia Trail"),
