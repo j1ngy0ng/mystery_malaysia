@@ -65,6 +65,10 @@ flutter:
   assets:
     - assets/images/mystery_malaysia_logo-v2.png
     - assets/images/malaysia-travel-hero.png
+    - assets/images/malaysia-travel-penang.png
+    - assets/images/malaysia-travel-kuala-lumpur.png
+    - assets/images/malaysia-travel-cameron-highlands.png
+    - assets/images/malaysia-travel-sabah.png
     - assets/images/state_badges/
 
   # To add assets to your application, add an assets section, like this:

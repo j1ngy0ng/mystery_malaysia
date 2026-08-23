@@ -3,7 +3,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../model/active_mission/app_location.dart';
 import '../controller/services/config/app_config.dart';
-import 'app_colors.dart';
+import '../theme/app_colors.dart';
 
 class MissionMap extends StatefulWidget {
   const MissionMap({

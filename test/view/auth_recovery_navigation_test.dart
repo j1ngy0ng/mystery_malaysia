@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mystery_malaysia/view/app.dart';
+import 'package:mystery_malaysia/app/app.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 void main() {

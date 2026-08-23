@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mystery_malaysia/view/app.dart';
+import 'package:mystery_malaysia/app/app.dart';
 import 'package:mystery_malaysia/controller/user_profile/user_profile_facade_interface.dart';
 import 'package:mystery_malaysia/model/user_profile/user_profile.dart';
 import 'package:mystery_malaysia/view/mission_discovery/home_view.dart';
-import 'package:mystery_malaysia/view/app_theme.dart';
+import 'package:mystery_malaysia/theme/app_theme.dart';
 
 void main() {
   testWidgets('shows the mission discovery entry point', (tester) async {
@@ -23,6 +23,17 @@ void main() {
     expect(find.text('Mystery MY'), findsOneWidget);
     expect(find.text('Where will you explore next?'), findsOneWidget);
     expect(find.text('Plan from my location'), findsOneWidget);
+    expect(find.text('Build your Malaysia passport'), findsNothing);
+    expect(
+      _assetImage('assets/images/malaysia-travel-hero.png'),
+      findsOneWidget,
+    );
+    await tester.pump(const Duration(seconds: 10));
+    await tester.pump(const Duration(milliseconds: 900));
+    expect(
+      _assetImage('assets/images/malaysia-travel-penang.png'),
+      findsOneWidget,
+    );
     await tester.scrollUntilVisible(
       find.text('Explore Malaysia differently'),
       300,
@@ -38,6 +49,13 @@ void main() {
     expect(find.text('Start the adventure'), findsOneWidget);
   });
 }
+
+Finder _assetImage(String assetName) => find.byWidgetPredicate(
+  (widget) =>
+      widget is Image &&
+      widget.image is AssetImage &&
+      (widget.image as AssetImage).assetName == assetName,
+);
 
 class _ProfileFacade extends ChangeNotifier implements IUserProfileFacade {
   @override

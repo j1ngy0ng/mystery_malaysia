@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mystery_malaysia/view/malaysia_loading.dart';
+import 'package:mystery_malaysia/widgets/malaysia_loading.dart';
 
 void main() {
   testWidgets('loading blocker prevents background interaction', (

@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import '../../controller/app_dependencies.dart';
 import '../../controller/mission_discovery/mission_discovery_facade_interface.dart';
 import 'recommendations_view.dart';
-import '../app_colors.dart';
-import '../app_spacing.dart';
-import '../status_pill.dart';
-import '../malaysia_loading.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_spacing.dart';
+import '../../widgets/status_pill.dart';
+import '../../widgets/malaysia_loading.dart';
 
 class MissionBuilderView extends StatefulWidget {
   const MissionBuilderView({required this.facade, super.key});

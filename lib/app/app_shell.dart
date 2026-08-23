@@ -5,12 +5,12 @@ import '../controller/app_dependencies.dart';
 import '../controller/collaborative_travel/collaborative_travel_facade_interface.dart';
 import '../controller/passport_diary/passport_diary_facade_interface.dart';
 import '../controller/user_profile/user_profile_facade_interface.dart';
-import 'active_mission/mission_history_view.dart';
-import 'app_colors.dart';
-import 'collaborative_travel/invitations_view.dart';
-import 'mission_discovery/home_view.dart';
-import 'passport_diary/passport_view.dart';
-import 'user_profile/profile_view.dart';
+import '../view/active_mission/mission_history_view.dart';
+import '../theme/app_colors.dart';
+import '../view/collaborative_travel/invitations_view.dart';
+import '../view/mission_discovery/home_view.dart';
+import '../view/passport_diary/passport_view.dart';
+import '../view/user_profile/profile_view.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../controller/user_profile/user_profile_facade_interface.dart';
-import '../app_colors.dart';
+import '../../theme/app_colors.dart';
 
 class UpdatePasswordView extends StatefulWidget {
   const UpdatePasswordView({required this.facade, super.key});

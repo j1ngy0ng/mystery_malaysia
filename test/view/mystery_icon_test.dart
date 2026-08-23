@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mystery_malaysia/view/mission_card.dart';
+import 'package:mystery_malaysia/widgets/mission_card.dart';
 
 void main() {
   test('uses only context-relevant mystery preview icons', () {

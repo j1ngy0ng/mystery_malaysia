@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../controller/user_profile/user_profile_facade_interface.dart';
-import '../app_colors.dart';
-import '../app_spacing.dart';
-import '../app_logo.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_spacing.dart';
+import '../../widgets/app_logo.dart';
 
 class SignInView extends StatefulWidget {
   const SignInView({required this.facade, super.key});

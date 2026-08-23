@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import '../../controller/app_dependencies.dart';
 import '../../controller/collaborative_travel/collaborative_travel_facade_interface.dart';
 import '../../model/collaborative_travel/mission_participant.dart';
-import '../app_colors.dart';
-import '../app_spacing.dart';
-import '../section_header.dart';
-import '../status_pill.dart';
-import '../malaysia_loading.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_spacing.dart';
+import '../../widgets/section_header.dart';
+import '../../widgets/status_pill.dart';
+import '../../widgets/malaysia_loading.dart';
 import 'shared_mission_view.dart';
 
 class InvitationsView extends StatefulWidget {

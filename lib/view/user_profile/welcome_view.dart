@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../app_colors.dart';
-import '../app_spacing.dart';
-import '../app_logo.dart';
-import '../malaysia_backdrop.dart';
-import '../malaysia_skyline.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_spacing.dart';
+import '../../widgets/app_logo.dart';
+import '../../widgets/malaysia_backdrop.dart';
+import '../../widgets/malaysia_skyline.dart';
 
 class WelcomeView extends StatelessWidget {
   const WelcomeView({super.key});

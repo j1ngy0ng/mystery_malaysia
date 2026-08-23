@@ -5,8 +5,8 @@ import 'package:app_links/app_links.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app_router.dart';
-import 'app_theme.dart';
-import 'malaysia_backdrop.dart';
+import '../theme/app_theme.dart';
+import '../widgets/malaysia_backdrop.dart';
 import '../controller/services/config/app_config.dart';
 import '../controller/app_dependencies.dart';
 import '../controller/user_profile/user_profile_facade_interface.dart';

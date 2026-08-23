@@ -4,8 +4,8 @@ import 'package:mystery_malaysia/controller/app_dependencies.dart';
 import 'package:mystery_malaysia/controller/collaborative_travel/collaborative_travel_facade_interface.dart';
 import 'package:mystery_malaysia/model/collaborative_travel/mission_participant.dart';
 import 'package:mystery_malaysia/view/collaborative_travel/shared_mission_view.dart';
-import 'package:mystery_malaysia/view/app_theme.dart';
-import 'package:mystery_malaysia/view/mission_map.dart';
+import 'package:mystery_malaysia/theme/app_theme.dart';
+import 'package:mystery_malaysia/widgets/mission_map.dart';
 
 void main() {
   testWidgets('does not create a destination map before GPS is available', (

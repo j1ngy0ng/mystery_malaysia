@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../model/mission_discovery/mission_recommendation.dart';
-import 'app_colors.dart';
-import 'app_spacing.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_spacing.dart';
 import 'status_pill.dart';
 
 IconData mysteryPreviewIcon(String description) {

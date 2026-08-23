@@ -12,10 +12,10 @@ import 'package:mystery_malaysia/model/active_mission/destination_guide.dart';
 import 'package:mystery_malaysia/model/active_mission/mission_session.dart';
 import 'package:mystery_malaysia/model/clue_hint/mystery_clue.dart';
 import 'package:mystery_malaysia/view/active_mission/active_mission_view.dart';
-import 'package:mystery_malaysia/view/app.dart';
-import 'package:mystery_malaysia/view/app_theme.dart';
+import 'package:mystery_malaysia/app/app.dart';
+import 'package:mystery_malaysia/theme/app_theme.dart';
 import 'package:mystery_malaysia/view/collaborative_travel/shared_mission_view.dart';
-import 'package:mystery_malaysia/view/malaysia_backdrop.dart';
+import 'package:mystery_malaysia/widgets/malaysia_backdrop.dart';
 import 'package:mystery_malaysia/view/mission_discovery/recommendations_view.dart';
 
 const goldenDirectory = '../figma/mystery-malaysia-ui-generator/screens';

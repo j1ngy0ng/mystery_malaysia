@@ -4,9 +4,9 @@ import '../../controller/app_dependencies.dart';
 import '../../controller/user_profile/user_profile_facade_interface.dart';
 import '../../model/user_profile/app_notification.dart';
 import '../collaborative_travel/invitations_view.dart';
-import '../app_colors.dart';
-import '../malaysia_backdrop.dart';
-import '../malaysia_loading.dart';
+import '../../theme/app_colors.dart';
+import '../../widgets/malaysia_backdrop.dart';
+import '../../widgets/malaysia_loading.dart';
 
 class NotificationsView extends StatefulWidget {
   const NotificationsView({required this.facade, super.key});

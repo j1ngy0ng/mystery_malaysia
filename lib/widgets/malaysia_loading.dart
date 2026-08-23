@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import 'app_colors.dart';
-import 'app_spacing.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_spacing.dart';
 
 class MalaysiaLoadingBlocker extends StatelessWidget {
   const MalaysiaLoadingBlocker({

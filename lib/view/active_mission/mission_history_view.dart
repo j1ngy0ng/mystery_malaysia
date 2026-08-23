@@ -4,10 +4,10 @@ import '../../controller/app_dependencies.dart';
 import '../../controller/active_mission/active_mission_facade_interface.dart';
 import '../../model/active_mission/mission_history_item.dart';
 import '../../model/active_mission/mission_session.dart';
-import '../app_colors.dart';
-import '../app_spacing.dart';
-import '../status_pill.dart';
-import '../malaysia_loading.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_spacing.dart';
+import '../../widgets/status_pill.dart';
+import '../../widgets/malaysia_loading.dart';
 import 'active_mission_view.dart';
 import '../collaborative_travel/shared_mission_view.dart';
 

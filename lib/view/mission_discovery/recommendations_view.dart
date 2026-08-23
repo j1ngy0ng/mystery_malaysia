@@ -5,11 +5,11 @@ import '../../controller/mission_discovery/mission_discovery_facade_interface.da
 import '../../model/mission_discovery/mission_recommendation.dart';
 import '../active_mission/active_mission_view.dart';
 import '../collaborative_travel/shared_mission_view.dart';
-import '../app_colors.dart';
-import '../app_spacing.dart';
-import '../mission_card.dart';
-import '../status_pill.dart';
-import '../malaysia_loading.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_spacing.dart';
+import '../../widgets/mission_card.dart';
+import '../../widgets/status_pill.dart';
+import '../../widgets/malaysia_loading.dart';
 
 class RecommendationsView extends StatefulWidget {
   const RecommendationsView({

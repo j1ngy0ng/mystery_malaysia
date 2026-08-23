@@ -7,10 +7,10 @@ import '../../controller/active_mission/active_mission_facade_interface.dart';
 import '../../model/active_mission/destination_guide.dart';
 import '../../model/active_mission/mission_session.dart';
 import '../clue_hint/clue_view.dart';
-import '../app_colors.dart';
-import '../app_spacing.dart';
-import '../mission_map.dart';
-import '../status_pill.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_spacing.dart';
+import '../../widgets/mission_map.dart';
+import '../../widgets/status_pill.dart';
 
 class ActiveMissionView extends StatefulWidget {
   const ActiveMissionView({required this.facade, super.key});

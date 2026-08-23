@@ -1,12 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../controller/user_profile/user_profile_facade_interface.dart';
-import '../app_colors.dart';
-import '../app_logo.dart';
-import '../app_spacing.dart';
-import '../malaysia_backdrop.dart';
-import '../section_header.dart';
-import '../status_pill.dart';
+import '../../theme/app_colors.dart';
+import '../../widgets/app_logo.dart';
+import '../../theme/app_spacing.dart';
+import '../../widgets/malaysia_backdrop.dart';
+import '../../widgets/section_header.dart';
+import '../../widgets/status_pill.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({
@@ -115,10 +117,6 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
           const SectionHeader(title: 'How your mystery trip works'),
           const SizedBox(height: 12),
           const _JourneySteps(),
-          const SizedBox(height: 28),
-          _PassportTeaser(
-            onMissions: () => Navigator.pushNamed(context, '/missions'),
-          ),
         ],
       ),
     );
@@ -176,10 +174,49 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   }
 }
 
-class _TravelHero extends StatelessWidget {
+class _TravelHero extends StatefulWidget {
   const _TravelHero({required this.onTap});
 
   final VoidCallback onTap;
+
+  @override
+  State<_TravelHero> createState() => _TravelHeroState();
+}
+
+class _TravelHeroState extends State<_TravelHero> {
+  static const images = [
+    'assets/images/malaysia-travel-hero.png',
+    'assets/images/malaysia-travel-penang.png',
+    'assets/images/malaysia-travel-kuala-lumpur.png',
+    'assets/images/malaysia-travel-cameron-highlands.png',
+    'assets/images/malaysia-travel-sabah.png',
+  ];
+
+  Timer? timer;
+  var currentImage = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    timer = Timer.periodic(const Duration(seconds: 10), (_) {
+      if (!mounted) return;
+      setState(() => currentImage = (currentImage + 1) % images.length);
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    for (final image in images) {
+      precacheImage(AssetImage(image), context);
+    }
+  }
+
+  @override
+  void dispose() {
+    timer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -189,7 +226,7 @@ class _TravelHero extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: onTap,
+          onTap: widget.onTap,
           borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
           child: Ink(
             height: 330,
@@ -208,10 +245,18 @@ class _TravelHero extends StatelessWidget {
                 Positioned.fill(
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
-                    child: Image.asset(
-                      'assets/images/malaysia-travel-hero.png',
-                      fit: BoxFit.cover,
-                      alignment: Alignment.center,
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 850),
+                      switchInCurve: Curves.easeOut,
+                      switchOutCurve: Curves.easeIn,
+                      child: Image.asset(
+                        images[currentImage],
+                        key: ValueKey(images[currentImage]),
+                        width: double.infinity,
+                        height: double.infinity,
+                        fit: BoxFit.cover,
+                        alignment: Alignment.center,
+                      ),
                     ),
                   ),
                 ),
@@ -240,6 +285,27 @@ class _TravelHero extends StatelessWidget {
                     icon: Icons.location_on_rounded,
                     color: AppColors.ink,
                     background: Colors.white.withValues(alpha: .92),
+                  ),
+                ),
+                Positioned(
+                  right: 18,
+                  top: 25,
+                  child: Row(
+                    children: [
+                      for (var index = 0; index < images.length; index++)
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          width: index == currentImage ? 20 : 7,
+                          height: 7,
+                          margin: const EdgeInsets.only(left: 5),
+                          decoration: BoxDecoration(
+                            color: index == currentImage
+                                ? AppColors.mango
+                                : Colors.white.withValues(alpha: .7),
+                            borderRadius: BorderRadius.circular(99),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
                 Positioned(
@@ -425,84 +491,6 @@ class _JourneySteps extends StatelessWidget {
                 size: 19,
               ),
           ],
-        ],
-      ),
-    );
-  }
-}
-
-class _PassportTeaser extends StatelessWidget {
-  const _PassportTeaser({required this.onMissions});
-
-  final VoidCallback onMissions;
-
-  @override
-  Widget build(BuildContext context) {
-    const badges = ['sgr', 'png', 'sbh'];
-    return Container(
-      padding: const EdgeInsets.all(19),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFFFF4C7), Color(0xFFE9FFF9)],
-        ),
-        borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
-        border: Border.all(color: AppColors.mango.withValues(alpha: .3)),
-      ),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 102,
-            height: 72,
-            child: Stack(
-              children: [
-                for (var index = 0; index < badges.length; index++)
-                  Positioned(
-                    left: index * 25,
-                    top: index.isOdd ? 7 : 0,
-                    child: Container(
-                      width: 60,
-                      height: 60,
-                      padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.mango, width: 2),
-                      ),
-                      child: ClipOval(
-                        child: Image.asset(
-                          'assets/images/state_badges/${badges[index]}.webp',
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 13),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Build your Malaysia passport',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Every verified stop reveals one piece of a state mission badge.',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-                const SizedBox(height: 6),
-                TextButton.icon(
-                  onPressed: onMissions,
-                  iconAlignment: IconAlignment.end,
-                  icon: const Icon(Icons.arrow_forward_rounded, size: 17),
-                  label: const Text('View my missions'),
-                ),
-              ],
-            ),
-          ),
         ],
       ),
     );

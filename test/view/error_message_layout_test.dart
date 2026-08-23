@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mystery_malaysia/view/app_theme.dart';
+import 'package:mystery_malaysia/theme/app_theme.dart';
 
 void main() {
   testWidgets('field errors wrap on a narrow phone screen', (tester) async {
