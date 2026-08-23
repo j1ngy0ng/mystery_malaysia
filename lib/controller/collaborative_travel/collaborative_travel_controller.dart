@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../services/errors/api_error.dart';
 import '../../model/collaborative_travel/mission_participant.dart';
+import '../../model/active_mission/mission_session.dart';
 import '../services/supabase/supabase_data_service.dart';
 
 class CollaborativeTravelController extends ChangeNotifier {
@@ -86,6 +87,9 @@ class CollaborativeTravelController extends ChangeNotifier {
 
   Future<bool> start() =>
       _mutation({'action': 'start', 'session_id': sessionId});
+
+  Future<MissionLaunch?> loadCurrentMission() =>
+      _dataService.loadCurrentMission();
 
   Future<bool> _mutation(
     Map<String, dynamic> body, {

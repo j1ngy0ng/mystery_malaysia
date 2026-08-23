@@ -14,6 +14,7 @@ abstract interface class IMissionDiscoveryFacade implements Listenable {
   AppLocation? get currentLocation;
   String? get locationError;
   String? get generationError;
+  String? get operationError;
   bool get hasLocation;
   String get locationLabel;
   List<MissionRecommendation> get recommendations;
@@ -24,9 +25,9 @@ abstract interface class IMissionDiscoveryFacade implements Listenable {
   void updateMaximumDistance(double value);
   Future<void> detectCurrentLocation();
   Future<bool> generate();
-  Future<MissionLaunch> selectMission(String recommendationId);
-  Future<String> createSharedMission(String recommendationId);
-  Future<MissionRecommendation> regenerateStop(
+  Future<MissionLaunch?> selectMission(String recommendationId);
+  Future<String?> createSharedMission(String recommendationId);
+  Future<MissionRecommendation?> regenerateStop(
     String recommendationId,
     int stopNumber,
   );

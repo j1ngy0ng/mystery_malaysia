@@ -30,6 +30,7 @@ class AuthenticationController extends ChangeNotifier {
   bool _dateOfBirthValid = false;
 
   bool get canSignIn => _emailValid && _signInPasswordValid;
+  bool get isSignedIn => _authService.isSignedIn;
   bool get canSendPasswordReset => _resetEmailValid;
   bool get canRegister =>
       _usernameValid &&

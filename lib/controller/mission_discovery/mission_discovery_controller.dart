@@ -2,21 +2,26 @@ import 'package:flutter/foundation.dart';
 
 import '../services/errors/api_error.dart';
 import '../../model/active_mission/app_location.dart';
+import '../../model/active_mission/mission_session.dart';
 import '../../model/mission_discovery/mission_recommendation.dart';
 import '../services/device/location_service.dart';
 import '../services/gemini/gemini_service.dart';
+import '../services/supabase/supabase_data_service.dart';
 
 class MissionDiscoveryController extends ChangeNotifier {
   MissionDiscoveryController({
     LocationService? locationService,
     GeminiService? geminiService,
+    SupabaseDataService? dataService,
     List<MissionRecommendation>? initialRecommendations,
   }) : _locationService = locationService ?? LocationService(),
        _geminiService = geminiService ?? GeminiService(),
+       _dataService = dataService ?? SupabaseDataService(),
        recommendations = List.of(initialRecommendations ?? demoRecommendations);
 
   final LocationService _locationService;
   final GeminiService _geminiService;
+  final SupabaseDataService _dataService;
 
   double budget = 120;
   double duration = 4;
@@ -27,6 +32,7 @@ class MissionDiscoveryController extends ChangeNotifier {
   AppLocation? currentLocation;
   String? locationError;
   String? generationError;
+  String? operationError;
 
   bool get hasLocation => currentLocation != null;
 
@@ -147,6 +153,42 @@ class MissionDiscoveryController extends ChangeNotifier {
     } finally {
       isGenerating = false;
       notifyListeners();
+    }
+  }
+
+  Future<MissionLaunch?> selectMission(String recommendationId) async {
+    operationError = null;
+    try {
+      return await _dataService.selectMission(recommendationId);
+    } on ApiError catch (error) {
+      operationError = error.message;
+      notifyListeners();
+      return null;
+    }
+  }
+
+  Future<String?> createSharedMission(String recommendationId) async {
+    operationError = null;
+    try {
+      return await _dataService.createSharedMission(recommendationId);
+    } on ApiError catch (error) {
+      operationError = error.message;
+      notifyListeners();
+      return null;
+    }
+  }
+
+  Future<MissionRecommendation?> regenerateStop(
+    String recommendationId,
+    int stopNumber,
+  ) async {
+    operationError = null;
+    try {
+      return await _dataService.regenerateStop(recommendationId, stopNumber);
+    } on ApiError catch (error) {
+      operationError = error.message;
+      notifyListeners();
+      return null;
     }
   }
 

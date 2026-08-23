@@ -8,7 +8,6 @@ import '../../model/active_mission/destination_guide.dart';
 import '../../model/active_mission/mission_history_item.dart';
 import '../../model/active_mission/mission_session.dart';
 import '../../model/clue_hint/mystery_clue.dart';
-import '../services/supabase/supabase_data_service.dart';
 
 class ActiveMissionFacade extends ChangeNotifier
     implements IActiveMissionFacade {
@@ -70,7 +69,6 @@ class MissionHistoryFacade extends ChangeNotifier
   }
 
   final MissionHistoryController _controller;
-  final SupabaseDataService _dataService = SupabaseDataService();
 
   @override
   MissionHistoryFilter get filter => _controller.filter;
@@ -85,7 +83,7 @@ class MissionHistoryFacade extends ChangeNotifier
   Future<void> load() => _controller.load();
   @override
   Future<MissionLaunch?> loadCurrentMission() =>
-      _dataService.loadCurrentMission();
+      _controller.loadCurrentMission();
   @override
   void selectFilter(MissionHistoryFilter value) =>
       _controller.selectFilter(value);

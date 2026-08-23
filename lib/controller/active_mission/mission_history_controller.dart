@@ -44,6 +44,9 @@ class MissionHistoryController extends ChangeNotifier {
     }
   }
 
+  Future<MissionLaunch?> loadCurrentMission() =>
+      _dataService.loadCurrentMission();
+
   void selectFilter(MissionHistoryFilter value) {
     filter = value;
     notifyListeners();

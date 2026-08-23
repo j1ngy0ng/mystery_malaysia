@@ -4,7 +4,6 @@ import 'collaborative_travel_controller.dart';
 import 'collaborative_travel_facade_interface.dart';
 import '../../model/active_mission/mission_session.dart';
 import '../../model/collaborative_travel/mission_participant.dart';
-import '../services/supabase/supabase_data_service.dart';
 
 class CollaborativeTravelFacade extends ChangeNotifier
     implements ICollaborativeTravelFacade {
@@ -14,7 +13,6 @@ class CollaborativeTravelFacade extends ChangeNotifier
   }
 
   final CollaborativeTravelController _controller;
-  final SupabaseDataService _dataService = SupabaseDataService();
 
   @override
   String? get sessionId => _controller.sessionId;
@@ -60,7 +58,7 @@ class CollaborativeTravelFacade extends ChangeNotifier
   Future<bool> start() => _controller.start();
   @override
   Future<MissionLaunch?> loadCurrentMission() =>
-      _dataService.loadCurrentMission();
+      _controller.loadCurrentMission();
 
   @override
   void dispose() {

@@ -5,7 +5,6 @@ import 'mission_discovery_facade_interface.dart';
 import '../../model/active_mission/app_location.dart';
 import '../../model/active_mission/mission_session.dart';
 import '../../model/mission_discovery/mission_recommendation.dart';
-import '../services/supabase/supabase_data_service.dart';
 
 class MissionDiscoveryFacade extends ChangeNotifier
     implements IMissionDiscoveryFacade {
@@ -17,7 +16,6 @@ class MissionDiscoveryFacade extends ChangeNotifier
   }
 
   final MissionDiscoveryController _controller;
-  final SupabaseDataService _dataService = SupabaseDataService();
 
   @override
   double get budget => _controller.budget;
@@ -37,6 +35,8 @@ class MissionDiscoveryFacade extends ChangeNotifier
   String? get locationError => _controller.locationError;
   @override
   String? get generationError => _controller.generationError;
+  @override
+  String? get operationError => _controller.operationError;
   @override
   bool get hasLocation => _controller.hasLocation;
   @override
@@ -59,16 +59,16 @@ class MissionDiscoveryFacade extends ChangeNotifier
   @override
   Future<bool> generate() => _controller.generate();
   @override
-  Future<MissionLaunch> selectMission(String recommendationId) =>
-      _dataService.selectMission(recommendationId);
+  Future<MissionLaunch?> selectMission(String recommendationId) =>
+      _controller.selectMission(recommendationId);
   @override
-  Future<String> createSharedMission(String recommendationId) =>
-      _dataService.createSharedMission(recommendationId);
+  Future<String?> createSharedMission(String recommendationId) =>
+      _controller.createSharedMission(recommendationId);
   @override
-  Future<MissionRecommendation> regenerateStop(
+  Future<MissionRecommendation?> regenerateStop(
     String recommendationId,
     int stopNumber,
-  ) => _dataService.regenerateStop(recommendationId, stopNumber);
+  ) => _controller.regenerateStop(recommendationId, stopNumber);
 
   @override
   void dispose() {

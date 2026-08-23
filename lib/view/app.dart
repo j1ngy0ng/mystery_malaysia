@@ -8,6 +8,8 @@ import 'app_router.dart';
 import 'app_theme.dart';
 import 'malaysia_backdrop.dart';
 import '../controller/services/config/app_config.dart';
+import '../controller/app_dependencies.dart';
+import '../controller/user_profile/user_profile_facade_interface.dart';
 
 class MysteryMalaysiaApp extends StatefulWidget {
   const MysteryMalaysiaApp({
@@ -25,6 +27,8 @@ class MysteryMalaysiaApp extends StatefulWidget {
 
 class _MysteryMalaysiaAppState extends State<MysteryMalaysiaApp> {
   final navigatorKey = GlobalKey<NavigatorState>();
+  late final IAuthenticationFacade authentication =
+      AppDependencies.authentication();
   StreamSubscription<AuthState>? authSubscription;
   StreamSubscription<Uri>? linkSubscription;
 
@@ -34,8 +38,7 @@ class _MysteryMalaysiaAppState extends State<MysteryMalaysiaApp> {
     if (!AppConfig.demoMode) {
       linkSubscription = AppLinks().uriLinkStream.listen((uri) {
         if (uri.host != 'mission-invite') return;
-        final signedIn = Supabase.instance.client.auth.currentSession != null;
-        _replaceAll(signedIn ? '/home' : '/auth/register');
+        _replaceAll(authentication.isSignedIn ? '/home' : '/auth/register');
       });
     }
     authSubscription = widget.authStateChanges?.listen((authState) {
@@ -51,6 +54,14 @@ class _MysteryMalaysiaAppState extends State<MysteryMalaysiaApp> {
     }, onError: (Object _, StackTrace _) {});
   }
 
+  @override
+  void dispose() {
+    linkSubscription?.cancel();
+    authSubscription?.cancel();
+    authentication.dispose();
+    super.dispose();
+  }
+
   void _replaceAll(String route) {
     final navigator = navigatorKey.currentState;
     if (navigator != null) {
@@ -62,13 +73,6 @@ class _MysteryMalaysiaAppState extends State<MysteryMalaysiaApp> {
       if (!mounted) return;
       navigatorKey.currentState?.pushNamedAndRemoveUntil(route, (_) => false);
     });
-  }
-
-  @override
-  void dispose() {
-    authSubscription?.cancel();
-    linkSubscription?.cancel();
-    super.dispose();
   }
 
   @override

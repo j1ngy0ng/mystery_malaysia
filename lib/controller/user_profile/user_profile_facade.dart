@@ -23,6 +23,8 @@ class AuthenticationFacade extends ChangeNotifier
   @override
   bool get canSignIn => _controller.canSignIn;
   @override
+  bool get isSignedIn => _controller.isSignedIn;
+  @override
   bool get canRegister => _controller.canRegister;
   @override
   bool get canSendPasswordReset => _controller.canSendPasswordReset;

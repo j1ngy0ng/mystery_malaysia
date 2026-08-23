@@ -8,6 +8,7 @@ abstract interface class IAuthenticationFacade implements Listenable {
   bool get obscurePassword;
   bool get isLoading;
   bool get canSignIn;
+  bool get isSignedIn;
   bool get canRegister;
   bool get canSendPasswordReset;
   String? get error;

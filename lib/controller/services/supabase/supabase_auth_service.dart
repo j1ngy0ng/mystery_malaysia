@@ -7,6 +7,7 @@ class SupabaseAuthService {
   SupabaseClient get _client => Supabase.instance.client;
 
   User? get currentUser => AppConfig.demoMode ? null : _client.auth.currentUser;
+  bool get isSignedIn => AppConfig.demoMode || currentUser != null;
 
   Future<bool> isEmailRegistered(String email) async {
     if (AppConfig.demoMode) return true;

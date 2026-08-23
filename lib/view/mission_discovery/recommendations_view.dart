@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../controller/app_dependencies.dart';
-import '../../controller/services/errors/api_error.dart';
 import '../../controller/mission_discovery/mission_discovery_facade_interface.dart';
 import '../../model/mission_discovery/mission_recommendation.dart';
 import '../active_mission/active_mission_view.dart';
@@ -440,6 +439,10 @@ class _RecommendationsViewState extends State<RecommendationsView> {
     setState(() => isRegenerating = true);
     try {
       final updated = await facade.regenerateStop(mission.id!, stop);
+      if (updated == null) {
+        _showOperationError();
+        return;
+      }
       final index = recommendations.indexWhere((item) => item.id == mission.id);
       if (index >= 0) recommendations[index] = updated;
       selected = updated;
@@ -448,11 +451,6 @@ class _RecommendationsViewState extends State<RecommendationsView> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Mystery stop $stop was regenerated.')),
       );
-    } on ApiError catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.message)));
     } finally {
       if (mounted) setState(() => isRegenerating = false);
     }
@@ -476,6 +474,10 @@ class _RecommendationsViewState extends State<RecommendationsView> {
       final launch = await facade.selectMission(recommendationId);
       if (!mounted) return;
       Navigator.pop(context);
+      if (launch == null) {
+        _showOperationError();
+        return;
+      }
       await Navigator.push(
         context,
         MaterialPageRoute<void>(
@@ -484,12 +486,9 @@ class _RecommendationsViewState extends State<RecommendationsView> {
           ),
         ),
       );
-    } on ApiError catch (error) {
-      if (!mounted) return;
-      Navigator.pop(context);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.message)));
+    } catch (_) {
+      if (mounted) Navigator.pop(context);
+      rethrow;
     }
   }
 
@@ -509,6 +508,10 @@ class _RecommendationsViewState extends State<RecommendationsView> {
       final sessionId = await facade.createSharedMission(mission.id!);
       if (!mounted) return;
       Navigator.pop(context);
+      if (sessionId == null) {
+        _showOperationError();
+        return;
+      }
       await Navigator.push(
         context,
         MaterialPageRoute<void>(
@@ -517,12 +520,20 @@ class _RecommendationsViewState extends State<RecommendationsView> {
           ),
         ),
       );
-    } on ApiError catch (error) {
-      if (!mounted) return;
-      Navigator.pop(context);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.message)));
+    } catch (_) {
+      if (mounted) Navigator.pop(context);
+      rethrow;
     }
+  }
+
+  void _showOperationError() {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          facade.operationError ?? 'The request could not be completed.',
+        ),
+      ),
+    );
   }
 }
