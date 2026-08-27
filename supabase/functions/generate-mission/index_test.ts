@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 
-import { validateRecommendations } from "./index.ts";
+import {
+  geocodingCountryCode,
+  isWithinMalaysiaBounds,
+  validateRecommendations,
+} from "./index.ts";
 
 const input = {
   origin_latitude: 3.1424,
@@ -44,4 +48,22 @@ Deno.test("mission options reuse stops only when the candidate pool requires it"
       Math.min(candidateCount, 9),
     );
   }
+});
+
+Deno.test("rejects coordinates outside Malaysia's geographic regions", () => {
+  assert.equal(isWithinMalaysiaBounds(3.139, 101.6869), true);
+  assert.equal(isWithinMalaysiaBounds(5.9804, 116.0735), true);
+  assert.equal(isWithinMalaysiaBounds(51.5072, -0.1276), false);
+});
+
+Deno.test("reads the country code used for exact Malaysia verification", () => {
+  assert.equal(
+    geocodingCountryCode({
+      results: [{
+        address_components: [{ short_name: "MY", types: ["country"] }],
+      }],
+    }),
+    "MY",
+  );
+  assert.equal(geocodingCountryCode({ results: [] }), null);
 });

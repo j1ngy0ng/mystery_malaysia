@@ -190,7 +190,10 @@ class AuthenticationController extends ChangeNotifier {
       notifyListeners();
       return false;
     }
-    return _run(() => _authService.updatePassword(password));
+    return _run(() async {
+      await _authService.updatePassword(password);
+      await _authService.signOut();
+    });
   }
 
   Future<bool> _run(Future<void> Function() operation, {String? flow}) async {

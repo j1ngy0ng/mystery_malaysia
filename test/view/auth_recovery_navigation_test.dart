@@ -1,7 +1,10 @@
 import 'dart:async';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mystery_malaysia/app/app.dart';
+import 'package:mystery_malaysia/controller/user_profile/user_profile_facade_interface.dart';
+import 'package:mystery_malaysia/view/user_profile/update_password_view.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 void main() {
@@ -56,4 +59,44 @@ void main() {
     expect(find.text('Where will you explore next?'), findsOneWidget);
     expect(find.text('Start the adventure'), findsNothing);
   });
+
+  testWidgets('successful password reset returns to sign in', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        routes: {
+          '/': (_) => UpdatePasswordView(facade: _AuthenticationFacade()),
+          '/auth/sign-in': (_) => const Scaffold(body: Text('Sign in again')),
+        },
+      ),
+    );
+
+    await tester.enterText(find.byType(TextField).first, 'Password!1');
+    await tester.enterText(find.byType(TextField).last, 'Password!1');
+    await tester.tap(find.text('Update password'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Sign in again'), findsOneWidget);
+    expect(find.text('Choose a new password'), findsNothing);
+  });
+}
+
+class _AuthenticationFacade extends ChangeNotifier
+    implements IAuthenticationFacade {
+  @override
+  bool get isLoading => false;
+  @override
+  String? get error => null;
+  @override
+  String? get passwordError => null;
+  @override
+  String? get confirmationPasswordError => null;
+
+  @override
+  Future<bool> updatePassword(
+    String password,
+    String confirmationPassword,
+  ) async => true;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

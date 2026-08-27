@@ -58,6 +58,15 @@ void main() {
     expect(service.resetSent, true);
   });
 
+  test('signs out the recovery session after updating password', () async {
+    final service = _AuthService(registered: true);
+    final controller = AuthenticationController(authService: service);
+
+    expect(await controller.updatePassword('Password!1', 'Password!1'), true);
+    expect(service.passwordUpdated, true);
+    expect(service.signedOut, true);
+  });
+
   test('enables buttons only after every local field is valid', () {
     final controller = AuthenticationController(
       authService: _AuthService(registered: true),
@@ -88,6 +97,8 @@ class _AuthService extends SupabaseAuthService {
   final bool registered;
   final bool rejectPassword;
   bool resetSent = false;
+  bool passwordUpdated = false;
+  bool signedOut = false;
   int registrationChecks = 0;
 
   @override
@@ -109,5 +120,15 @@ class _AuthService extends SupabaseAuthService {
   @override
   Future<void> sendPasswordReset(String email) async {
     resetSent = true;
+  }
+
+  @override
+  Future<void> updatePassword(String password) async {
+    passwordUpdated = true;
+  }
+
+  @override
+  Future<void> signOut() async {
+    signedOut = true;
   }
 }

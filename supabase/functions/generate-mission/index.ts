@@ -201,6 +201,40 @@ export default {
     const admin = context.supabaseAdmin;
     let requestId: string | null = null;
 
+    if (!isWithinMalaysiaBounds(
+      input.origin_latitude,
+      input.origin_longitude,
+    )) {
+      return malaysiaOnlyResponse();
+    }
+
+    const mapsKey = Deno.env.get("GOOGLE_PLACES_API_KEY")?.trim() ||
+      Deno.env.get("GOOGLE_ROUTES_API_KEY")?.trim();
+    if (!mapsKey) {
+      return Response.json(
+        { message: "Google location verification is not configured." },
+        { status: 500 },
+      );
+    }
+    try {
+      if (!await isLocationInMalaysia(
+        mapsKey,
+        input.origin_latitude,
+        input.origin_longitude,
+      )) {
+        return malaysiaOnlyResponse();
+      }
+    } catch (error) {
+      console.error("Malaysia location verification failed:", error);
+      return Response.json(
+        {
+          message:
+            "Your location could not be verified as being in Malaysia. Please try again.",
+        },
+        { status: 503 },
+      );
+    }
+
     try {
       const { data: missionRequest, error: requestError } = await admin
         .from("mission_requests")
@@ -1556,6 +1590,79 @@ function validateInput(input: MissionInput): void {
   ) {
     throw new Error("group_type is invalid.");
   }
+}
+
+export function isWithinMalaysiaBounds(
+  latitude: number,
+  longitude: number,
+): boolean {
+  const within = (
+    minLatitude: number,
+    maxLatitude: number,
+    minLongitude: number,
+    maxLongitude: number,
+  ) =>
+    latitude >= minLatitude && latitude <= maxLatitude &&
+    longitude >= minLongitude && longitude <= maxLongitude;
+  return within(0.8, 7.5, 99.5, 105.0) ||
+    within(0.8, 7.6, 109.0, 119.5);
+}
+
+export function geocodingCountryCode(payload: unknown): string | null {
+  if (!payload || typeof payload !== "object") return null;
+  const results = (payload as { results?: unknown }).results;
+  if (!Array.isArray(results)) return null;
+  for (const result of results) {
+    if (!result || typeof result !== "object") continue;
+    const components = (result as { address_components?: unknown })
+      .address_components;
+    if (!Array.isArray(components)) continue;
+    for (const component of components) {
+      if (!component || typeof component !== "object") continue;
+      const value = component as {
+        short_name?: unknown;
+        types?: unknown;
+      };
+      if (
+        Array.isArray(value.types) && value.types.includes("country") &&
+        typeof value.short_name === "string"
+      ) {
+        return value.short_name.toUpperCase();
+      }
+    }
+  }
+  return null;
+}
+
+async function isLocationInMalaysia(
+  apiKey: string,
+  latitude: number,
+  longitude: number,
+): Promise<boolean> {
+  const url = new URL("https://maps.googleapis.com/maps/api/geocode/json");
+  url.searchParams.set("latlng", `${latitude},${longitude}`);
+  url.searchParams.set("key", apiKey);
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Geocoding API returned HTTP ${response.status}.`);
+  }
+  const payload = await response.json();
+  const status = payload?.status;
+  if (status !== "OK" && status !== "ZERO_RESULTS") {
+    throw new Error(`Geocoding API returned ${String(status)}.`);
+  }
+  return geocodingCountryCode(payload) === "MY";
+}
+
+function malaysiaOnlyResponse(): Response {
+  return Response.json(
+    {
+      recommendations: [],
+      message:
+        "Mystery missions can only be generated while you are in Malaysia.",
+    },
+    { status: 400 },
+  );
 }
 
 function assertNumber(

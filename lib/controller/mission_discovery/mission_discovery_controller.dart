@@ -34,7 +34,7 @@ class MissionDiscoveryController extends ChangeNotifier {
   String? generationError;
   String? operationError;
 
-  bool get hasLocation => currentLocation != null;
+  bool get hasLocation => currentLocation?.couldBeInMalaysia == true;
 
   String get locationLabel {
     final location = currentLocation;
@@ -110,6 +110,10 @@ class MissionDiscoveryController extends ChangeNotifier {
 
     try {
       currentLocation = await _locationService.getCurrentLocation();
+      if (!currentLocation!.couldBeInMalaysia) {
+        locationError =
+            'Mystery missions can only be generated while you are in Malaysia.';
+      }
     } on LocationServiceException catch (error) {
       locationError = error.message;
     } finally {
@@ -127,6 +131,12 @@ class MissionDiscoveryController extends ChangeNotifier {
     final location = currentLocation;
     if (location == null) {
       generationError = 'A GPS location is required to generate missions.';
+      notifyListeners();
+      return false;
+    }
+    if (!location.couldBeInMalaysia) {
+      generationError =
+          'Mystery missions can only be generated while you are in Malaysia.';
       notifyListeners();
       return false;
     }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mystery_malaysia/controller/app_dependencies.dart';
@@ -86,6 +88,30 @@ void main() {
 
     expect(facade.left, true);
   });
+
+  testWidgets('sending a crew invitation blocks the screen with loading', (
+    tester,
+  ) async {
+    final facade = _CrewFacade()..pendingInvitation = Completer<bool>();
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.bright,
+        home: SharedMissionView(facade: facade),
+      ),
+    );
+
+    await tester.tap(find.text('Invite'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'friend@example.com');
+    await tester.tap(find.text('Send invitation'));
+    await tester.pump();
+
+    expect(find.text('Sending your invitation...'), findsOneWidget);
+
+    facade.pendingInvitation!.complete(true);
+    await tester.pumpAndSettle();
+    expect(find.text('Sending your invitation...'), findsNothing);
+  });
 }
 
 class _CrewFacade extends ChangeNotifier implements ICollaborativeTravelFacade {
@@ -93,6 +119,8 @@ class _CrewFacade extends ChangeNotifier implements ICollaborativeTravelFacade {
 
   final bool host;
   bool left = false;
+  bool loading = false;
+  Completer<bool>? pendingInvitation;
 
   @override
   String? get sessionId => 'session-1';
@@ -105,7 +133,7 @@ class _CrewFacade extends ChangeNotifier implements ICollaborativeTravelFacade {
   @override
   bool get isReady => false;
   @override
-  bool get isLoading => false;
+  bool get isLoading => loading;
   @override
   String? get error => null;
   @override
@@ -136,6 +164,16 @@ class _CrewFacade extends ChangeNotifier implements ICollaborativeTravelFacade {
   Future<bool> leave() async {
     left = true;
     return true;
+  }
+
+  @override
+  Future<bool> invite(String email) async {
+    loading = true;
+    notifyListeners();
+    final sent = await (pendingInvitation?.future ?? Future.value(true));
+    loading = false;
+    notifyListeners();
+    return sent;
   }
 
   @override

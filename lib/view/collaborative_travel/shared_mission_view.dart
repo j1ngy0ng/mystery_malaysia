@@ -335,16 +335,7 @@ class _SharedMissionViewState extends State<SharedMissionView> {
             SizedBox(
               width: double.infinity,
               child: FilledButton.icon(
-                onPressed: () async {
-                  final sent = await facade.invite(invite.text);
-                  if (!sent || !sheetContext.mounted) return;
-                  Navigator.pop(sheetContext);
-                  if (context.mounted && facade.message != null) {
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(SnackBar(content: Text(facade.message!)));
-                  }
-                },
+                onPressed: () => _sendInvitation(context, sheetContext),
                 icon: const Icon(Icons.send_rounded),
                 label: const Text('Send invitation'),
               ),
@@ -353,6 +344,35 @@ class _SharedMissionViewState extends State<SharedMissionView> {
         ),
       ),
     );
+  }
+
+  Future<void> _sendInvitation(
+    BuildContext pageContext,
+    BuildContext sheetContext,
+  ) async {
+    FocusScope.of(sheetContext).unfocus();
+    showDialog<void>(
+      context: sheetContext,
+      barrierDismissible: false,
+      builder: (_) => const PopScope(
+        canPop: false,
+        child: Dialog(
+          child: MalaysiaLoading(message: 'Sending your invitation...'),
+        ),
+      ),
+    );
+
+    final sent = await facade.invite(invite.text);
+    if (!sheetContext.mounted) return;
+    Navigator.pop(sheetContext);
+    if (!sent) return;
+    Navigator.pop(sheetContext);
+    invite.clear();
+    if (pageContext.mounted && facade.message != null) {
+      ScaffoldMessenger.of(
+        pageContext,
+      ).showSnackBar(SnackBar(content: Text(facade.message!)));
+    }
   }
 
   void _confirmRemove(MissionParticipant participant) {

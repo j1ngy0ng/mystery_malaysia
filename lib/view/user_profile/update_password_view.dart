@@ -74,7 +74,7 @@ class _UpdatePasswordViewState extends State<UpdatePasswordView> {
                     if (!updated || !context.mounted) return;
                     Navigator.pushNamedAndRemoveUntil(
                       context,
-                      '/home',
+                      '/auth/sign-in',
                       (_) => false,
                     );
                   },
