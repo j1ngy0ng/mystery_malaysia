@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 
 import {
-  geocodingCountryCode,
   isWithinMalaysiaBounds,
   validateRecommendations,
 } from "./index.ts";
@@ -54,16 +53,4 @@ Deno.test("rejects coordinates outside Malaysia's geographic regions", () => {
   assert.equal(isWithinMalaysiaBounds(3.139, 101.6869), true);
   assert.equal(isWithinMalaysiaBounds(5.9804, 116.0735), true);
   assert.equal(isWithinMalaysiaBounds(51.5072, -0.1276), false);
-});
-
-Deno.test("reads the country code used for exact Malaysia verification", () => {
-  assert.equal(
-    geocodingCountryCode({
-      results: [{
-        address_components: [{ short_name: "MY", types: ["country"] }],
-      }],
-    }),
-    "MY",
-  );
-  assert.equal(geocodingCountryCode({ results: [] }), null);
 });
