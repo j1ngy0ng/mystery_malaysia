@@ -130,9 +130,9 @@ class DemoApiManager {
     'clue': {
       'number': 2,
       'text':
-          'Find the riverside cultural centre where visitors can watch artisans shape Malaysia’s famous pewter, near Jalan Usahawan.',
+          'Explore a lively craft district where metallic artworks, workshop displays and a modern cultural building shape the surroundings.',
       'hint':
-          'Its name begins with “Royal”, and its visitor centre celebrates Selangor pewter craft.',
+          'The destination name has 4 words. Its initials are “R • S • V • C”, and its final word is “Centre”.',
       'hint_revealed': false,
     },
   };
@@ -200,9 +200,9 @@ class DemoApiManager {
       'clue': {
         'number': 1,
         'text':
-            'Find the riverside cultural centre where visitors can watch artisans shape Malaysia’s famous pewter, near Jalan Usahawan.',
+            'Explore a lively craft district where metallic artworks, workshop displays and a modern cultural building shape the surroundings.',
         'hint':
-            'Its name begins with “Royal”, and it celebrates Selangor pewter craft.',
+            'The destination name has 4 words. Its initials are “R • S • V • C”, and its final word is “Centre”.',
         'hint_revealed': false,
       },
     };
@@ -268,7 +268,7 @@ class DemoApiManager {
     if (action == 'hint') {
       return {
         'hint':
-            'Its name begins with “Royal”, and it celebrates Selangor pewter craft.',
+            'The destination name has 4 words. Its initials are “R • S • V • C”, and its final word is “Centre”.',
         'already_used': false,
       };
     }

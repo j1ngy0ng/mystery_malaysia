@@ -937,7 +937,7 @@ async function cacheEligiblePlaces({
       destination_id: row.id,
       clue_type: "observation",
       title: "Find this exact hidden stop",
-      prompt: obviousDestinationClue(source),
+      prompt: surroundingsDestinationClue(source),
       accepted_answers: [],
       validation_rules: {
         verification: "location",
@@ -947,7 +947,7 @@ async function cacheEligiblePlaces({
       clue_xp_reward: 0,
       hint_xp_cost: 0,
       ai_model: null,
-      prompt_version: "places-specific-no-address-v3",
+      prompt_version: "surroundings-and-name-hint-v4",
     };
   });
   const { error: clueError } = await admin
@@ -1411,44 +1411,56 @@ function friendlyPlaceType(value: unknown): string {
   return value.replaceAll("_", " ");
 }
 
-function obviousDestinationClue(
+export function surroundingsDestinationClue(
   destination?: {
-    name?: string;
     city?: string;
     state?: string;
     primary_type?: string;
   },
 ): string {
-  const name = destination?.name?.trim() || "this destination";
   const type = friendlyPlaceType(destination?.primary_type);
   const area = destination?.city?.trim() || destination?.state?.trim() ||
     "your nearby area";
-  const words = destinationNameWords(name);
-  const initials = words.map((word) => word[0].toUpperCase()).join(" • ");
-  const namePattern = words.length > 1
-    ? `Its ${words.length}-word official name has the initials “${initials}”.`
-    : `Its official name has ${[...name].length} characters, starts with “${
-      name[0].toUpperCase()
-    }” and ends with “${name.at(-1)?.toUpperCase()}”.`;
-  return `Seek a ${type} in ${area}. ${namePattern} ` +
-    "Follow the Hot & Cold signal and look for matching visitor signage.";
+  const surroundings = destinationSurroundings(destination?.primary_type);
+  return `Explore ${area}, where ${surroundings} Seek a ${type} whose ` +
+    "distinctive setting matches these surroundings, then follow the Hot & Cold signal.";
 }
 
-function additionalDestinationHint(
+export function additionalDestinationHint(
   destination?: { name?: string },
 ): string {
   const name = destination?.name?.trim() || "";
   const words = destinationNameWords(name);
   if (words.length > 1) {
-    return `The destination name has ${words.length} words and ends with “${
-      words.at(-1)
-    }”.`;
+    const initials = words.map((word) => word[0].toUpperCase()).join(" • ");
+    return `The destination name has ${words.length} words. Its initials are ` +
+      `“${initials}”, and its final word is “${words.at(-1)}”.`;
   }
   return name
     ? `The destination name has ${[...name].length} characters and starts with “${
       name[0].toUpperCase()
     }”. Look for its official visitor sign nearby.`
     : "Look for the official visitor entrance as the Hot & Cold signal strengthens.";
+}
+
+function destinationSurroundings(primaryType: unknown): string {
+  const type = typeof primaryType === "string" ? primaryType : "";
+  if (["park", "garden", "national_park"].includes(type)) {
+    return "open greenery, shaded paths and natural features shape the atmosphere.";
+  }
+  if (["museum", "art_gallery", "cultural_center"].includes(type)) {
+    return "cultural details, visitor signage and a characterful public building stand out.";
+  }
+  if (["historical_landmark", "monument", "tourist_attraction"].includes(type)) {
+    return "heritage details and a recognisable landmark form the centre of the scene.";
+  }
+  if (["mosque", "hindu_temple", "church", "place_of_worship"].includes(type)) {
+    return "a calm public space and distinctive sacred architecture shape the setting.";
+  }
+  if (["market", "shopping_center"].includes(type)) {
+    return "local movement, colourful shopfronts and a lively public gathering place surround you.";
+  }
+  return "local character, public visitor features and a recognisable exterior define the setting.";
 }
 
 function destinationNameWords(name: string): string[] {
