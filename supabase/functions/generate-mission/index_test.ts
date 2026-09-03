@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   additionalDestinationHint,
   isWithinMalaysiaBounds,
+  shouldTryNextGeminiModel,
   surroundingsDestinationClue,
   validateRecommendations,
 } from "./index.ts";
@@ -73,4 +74,13 @@ Deno.test("stages destination identity after the surroundings clue", () => {
     additionalDestinationHint({ name: "Saloma" }),
     "The destination name has 6 characters and starts with “S”. Look for its official visitor sign nearby.",
   );
+});
+
+Deno.test("tries the next Gemini model after retryable model failures", () => {
+  for (const status of [404, 429, 500, 502, 503, 504]) {
+    assert.equal(shouldTryNextGeminiModel(status), true);
+  }
+
+  assert.equal(shouldTryNextGeminiModel(400), false);
+  assert.equal(shouldTryNextGeminiModel(503, "gemini-3.6-flash"), false);
 });

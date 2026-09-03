@@ -9,6 +9,7 @@ import {
 
 const STOPS_PER_MISSION = 3;
 const MISSION_OPTIONS = 3;
+const GEMINI_FALLBACK_STATUSES = new Set([404, 429, 500, 502, 503, 504]);
 
 type MissionInput = {
   origin_latitude: number;
@@ -1070,7 +1071,7 @@ async function callGemini({
     `Hidden server candidates: ${JSON.stringify(candidates)}`,
   ].join("\n\n");
 
-  let lastNotFoundError: Error | null = null;
+  let lastModelError: Error | null = null;
   for (const model of models) {
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${
@@ -1097,8 +1098,8 @@ async function callGemini({
       const error = new Error(
         `Gemini model ${model} failed (${response.status}): ${detail}`,
       );
-      if (response.status === 404 && !configuredModel) {
-        lastNotFoundError = error;
+      if (shouldTryNextGeminiModel(response.status, configuredModel)) {
+        lastModelError = error;
         continue;
       }
       throw error;
@@ -1118,8 +1119,15 @@ async function callGemini({
     };
   }
 
-  throw lastNotFoundError ??
+  throw lastModelError ??
     new Error("No supported Gemini model was available.");
+}
+
+export function shouldTryNextGeminiModel(
+  status: number,
+  configuredModel?: string,
+): boolean {
+  return !configuredModel && GEMINI_FALLBACK_STATUSES.has(status);
 }
 
 async function googleErrorDetail(response: Response): Promise<string> {
