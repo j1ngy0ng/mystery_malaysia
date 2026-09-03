@@ -435,25 +435,41 @@ class _RecommendationsViewState extends State<RecommendationsView> {
     MissionRecommendation mission,
     int stop,
   ) async {
-    if (mission.id == null) return;
+    if (mission.id == null || isRegenerating) return;
     setState(() => isRegenerating = true);
+    final navigator = Navigator.of(context, rootNavigator: true);
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => PopScope(
+        canPop: false,
+        child: Dialog(
+          child: MalaysiaLoading(message: 'Regenerating mystery stop $stop...'),
+        ),
+      ),
+    );
+
+    MissionRecommendation? updated;
     try {
-      final updated = await facade.regenerateStop(mission.id!, stop);
-      if (updated == null) {
-        _showOperationError();
-        return;
-      }
-      final index = recommendations.indexWhere((item) => item.id == mission.id);
-      if (index >= 0) recommendations[index] = updated;
-      selected = updated;
-      if (!mounted || !sheetContext.mounted) return;
-      Navigator.pop(sheetContext);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Mystery stop $stop was regenerated.')),
-      );
+      updated = await facade.regenerateStop(mission.id!, stop);
     } finally {
+      if (navigator.mounted) navigator.pop();
       if (mounted) setState(() => isRegenerating = false);
     }
+
+    if (!mounted) return;
+    if (updated == null) {
+      _showOperationError();
+      return;
+    }
+    final index = recommendations.indexWhere((item) => item.id == mission.id);
+    if (index >= 0) recommendations[index] = updated;
+    selected = updated;
+    if (!sheetContext.mounted) return;
+    Navigator.pop(sheetContext);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Mystery stop $stop was regenerated.')),
+    );
   }
 
   Future<void> _saveMission(MissionRecommendation mission) async {
