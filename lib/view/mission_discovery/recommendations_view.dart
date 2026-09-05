@@ -101,7 +101,7 @@ class _RecommendationsViewState extends State<RecommendationsView> {
                     const SizedBox(height: 9),
                     Text(
                       'Built around RM ${widget.budgetMyr.round()} and a '
-                      '${widget.availableHours.round()}-hour travel window.',
+                          '${widget.availableHours.round()}-hour travel window.',
                       style: const TextStyle(color: Colors.white70),
                     ),
                   ],
@@ -121,7 +121,7 @@ class _RecommendationsViewState extends State<RecommendationsView> {
           ),
           const SizedBox(height: 12),
           ...recommendations.map(
-            (mission) => Padding(
+                (mission) => Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: MissionCard(
                 mission: mission,
@@ -141,22 +141,22 @@ class _RecommendationsViewState extends State<RecommendationsView> {
       bottomNavigationBar: selected == null
           ? null
           : SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 14),
-                child: FilledButton.icon(
-                  onPressed: () => _showMissionPreview(context, selected!),
-                  icon: const Icon(Icons.visibility_outlined),
-                  label: Text('Preview ${selected!.title}'),
-                ),
-              ),
-            ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 14),
+          child: FilledButton.icon(
+            onPressed: () => _showMissionPreview(context, selected!),
+            icon: const Icon(Icons.visibility_outlined),
+            label: Text('Preview ${selected!.title}'),
+          ),
+        ),
+      ),
     );
   }
 
   void _showMissionPreview(
-    BuildContext context,
-    MissionRecommendation mission,
-  ) {
+      BuildContext context,
+      MissionRecommendation mission,
+      ) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -397,7 +397,7 @@ class _RecommendationsViewState extends State<RecommendationsView> {
                         onPressed: mission.id == null || isRegenerating
                             ? null
                             : () =>
-                                  _regenerateStop(context, mission, index + 1),
+                            _regenerateStop(context, mission, index + 1),
                         icon: const Icon(Icons.refresh_rounded),
                       ),
                     ],
@@ -431,29 +431,45 @@ class _RecommendationsViewState extends State<RecommendationsView> {
   }
 
   Future<void> _regenerateStop(
-    BuildContext sheetContext,
-    MissionRecommendation mission,
-    int stop,
-  ) async {
-    if (mission.id == null) return;
+      BuildContext sheetContext,
+      MissionRecommendation mission,
+      int stop,
+      ) async {
+    if (mission.id == null || isRegenerating) return;
     setState(() => isRegenerating = true);
+    final navigator = Navigator.of(context, rootNavigator: true);
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => PopScope(
+        canPop: false,
+        child: Dialog(
+          child: MalaysiaLoading(message: 'Regenerating mystery stop $stop...'),
+        ),
+      ),
+    );
+
+    MissionRecommendation? updated;
     try {
-      final updated = await facade.regenerateStop(mission.id!, stop);
-      if (updated == null) {
-        _showOperationError();
-        return;
-      }
-      final index = recommendations.indexWhere((item) => item.id == mission.id);
-      if (index >= 0) recommendations[index] = updated;
-      selected = updated;
-      if (!mounted || !sheetContext.mounted) return;
-      Navigator.pop(sheetContext);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Mystery stop $stop was regenerated.')),
-      );
+      updated = await facade.regenerateStop(mission.id!, stop);
     } finally {
+      if (navigator.mounted) navigator.pop();
       if (mounted) setState(() => isRegenerating = false);
     }
+
+    if (!mounted) return;
+    if (updated == null) {
+      _showOperationError();
+      return;
+    }
+    final index = recommendations.indexWhere((item) => item.id == mission.id);
+    if (index >= 0) recommendations[index] = updated;
+    selected = updated;
+    if (!sheetContext.mounted) return;
+    Navigator.pop(sheetContext);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Mystery stop $stop was regenerated.')),
+    );
   }
 
   Future<void> _saveMission(MissionRecommendation mission) async {
