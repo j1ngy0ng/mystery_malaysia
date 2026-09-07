@@ -2,6 +2,39 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mystery_malaysia/model/passport_diary/traveller_progress.dart';
 
 void main() {
+  test('counts two Kuala Lumpur missions as one explored state', () {
+    final progress = TravellerProgress.fromJson({
+      'stats': {'completed_missions': 2, 'explored_states': 2},
+      'stamps': [
+        {'state': 'Kuala Lumpur', 'session_id': 'mission-1'},
+        {
+          'state': 'Wilayah Persekutuan Kuala Lumpur',
+          'session_id': 'mission-2',
+        },
+        {'state': 'Federal Territory of Kuala Lumpur'},
+      ],
+    });
+
+    expect(progress.completedMissions, 2);
+    expect(progress.exploredStates, 1);
+    expect(progress.stamps, hasLength(3));
+  });
+
+  test('counts distinct states and excludes unknown destinations', () {
+    final progress = TravellerProgress.fromJson({
+      'stamps': [
+        {'state': 'Kuala Lumpur'},
+        {'state': 'Penang'},
+        {'state': 'Pulau Pinang'},
+        {'state': 'Malaysia'},
+        {},
+      ],
+    });
+
+    expect(progress.exploredStates, 2);
+    expect(TravellerProgress.fromJson({'stamps': []}).exploredStates, 0);
+  });
+
   test('shows earned and locked achievements from the passport dashboard', () {
     final progress = TravellerProgress.fromJson({
       'stats': {
