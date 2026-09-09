@@ -254,12 +254,19 @@ class TravellerProgress {
 
   factory TravellerProgress.fromJson(Map<String, dynamic> json) {
     final stats = Map<String, dynamic>.from(json['stats'] as Map? ?? {});
+    final stamps = _maps(json['stamps']).map(PassportStamp.fromJson).toList();
     return TravellerProgress(
       completedMissions: (stats['completed_missions'] as num?)?.round() ?? 0,
       visitedDestinations:
           (stats['visited_destinations'] as num?)?.round() ?? 0,
-      exploredStates: (stats['explored_states'] as num?)?.round() ?? 0,
-      stamps: _maps(json['stamps']).map(PassportStamp.fromJson).toList(),
+      exploredStates: json['stamps'] is List
+          ? stamps
+                .map((stamp) => missionBadgeCode(stamp.state))
+                .where((code) => code != 'MYS')
+                .toSet()
+                .length
+          : (stats['explored_states'] as num?)?.round() ?? 0,
+      stamps: stamps,
       achievements: _maps(json['badges']).map(Achievement.fromJson).toList(),
       memories: _maps(json['diaries']).map(DiaryMemory.fromJson).toList(),
       eligibleDiaryMissions: _maps(

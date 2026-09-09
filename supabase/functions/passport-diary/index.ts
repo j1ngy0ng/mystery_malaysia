@@ -1,4 +1,5 @@
 import { withSupabase } from "npm:@supabase/server@1.4.1";
+import { countExploredStates } from "./states.ts";
 
 type Input = {
   action?:
@@ -87,7 +88,7 @@ export default {
             mission_title: mission?.title,
           };
         });
-        const states = new Set(stamps.map((stamp: any) => stamp.state)).size;
+        const states = countExploredStates(stamps);
         const criteria = {
           completed_missions: completed.length,
           verified_destinations: visits?.length ?? 0,
