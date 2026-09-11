@@ -79,7 +79,7 @@ class _RegisterViewState extends State<RegisterView> {
                 controller: email,
                 keyboardType: TextInputType.emailAddress,
                 textInputAction: TextInputAction.next,
-                onChanged: facade.validateEmail,
+                onChanged: facade.validateRegistrationEmail,
                 decoration: InputDecoration(
                   labelText: 'Email',
                   prefixIcon: const Icon(Icons.mail_outline_rounded),

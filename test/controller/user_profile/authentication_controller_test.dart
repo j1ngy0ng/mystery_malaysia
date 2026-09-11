@@ -18,6 +18,29 @@ void main() {
     expect(service.registrationChecks, 0);
   });
 
+  test('rejects plus-address tags during registration only', () async {
+    final service = _AuthService(registered: false);
+    final controller = AuthenticationController(authService: service);
+
+    controller.validateRegistrationEmail('person+second@example.com');
+    expect(controller.emailError, primaryEmailRequiredMessage);
+
+    controller.validateEmail('person+second@example.com');
+    expect(controller.emailError, isNull);
+
+    final result = await controller.register(
+      username: 'traveller',
+      email: 'person+second@example.com',
+      password: 'Password!1',
+      confirmationPassword: 'Password!1',
+      gender: 'female',
+      dateOfBirth: DateTime(2000, 1, 1),
+    );
+    expect(result, isNull);
+    expect(controller.emailError, primaryEmailRequiredMessage);
+    expect(service.registrationChecks, 0);
+  });
+
   test('places an unknown login email error under the email field', () async {
     final controller = AuthenticationController(
       authService: _AuthService(registered: false),

@@ -51,6 +51,9 @@ class AuthenticationFacade extends ChangeNotifier
   @override
   void validateEmail(String value) => _controller.validateEmail(value);
   @override
+  void validateRegistrationEmail(String value) =>
+      _controller.validateRegistrationEmail(value);
+  @override
   void validateResetEmail(String value) =>
       _controller.validateResetEmail(value);
   @override

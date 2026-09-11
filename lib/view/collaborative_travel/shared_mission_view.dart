@@ -365,7 +365,14 @@ class _SharedMissionViewState extends State<SharedMissionView> {
     final sent = await facade.invite(invite.text);
     if (!sheetContext.mounted) return;
     Navigator.pop(sheetContext);
-    if (!sent) return;
+    if (!sent) {
+      if (pageContext.mounted && facade.error != null) {
+        ScaffoldMessenger.of(
+          pageContext,
+        ).showSnackBar(SnackBar(content: Text(facade.error!)));
+      }
+      return;
+    }
     Navigator.pop(sheetContext);
     invite.clear();
     if (pageContext.mounted && facade.message != null) {

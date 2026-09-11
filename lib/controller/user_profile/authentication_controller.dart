@@ -51,6 +51,12 @@ class AuthenticationController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void validateRegistrationEmail(String value) {
+    emailError = _registrationEmailValidation(value);
+    _emailValid = emailError == null;
+    notifyListeners();
+  }
+
   void validateResetEmail(String value) {
     resetEmailError = _emailValidation(value);
     _resetEmailValid = resetEmailError == null;
@@ -122,7 +128,7 @@ class AuthenticationController extends ChangeNotifier {
   }) async {
     _clearErrors();
     usernameError = _usernameValidation(username);
-    emailError = _emailValidation(email);
+    emailError = _registrationEmailValidation(email);
     passwordError = _passwordValidation(password);
     confirmationPasswordError = _confirmationValidation(
       password,
@@ -234,6 +240,12 @@ class AuthenticationController extends ChangeNotifier {
     return RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(value.trim())
         ? null
         : 'Enter a valid email address, for example name@example.com.';
+  }
+
+  String? _registrationEmailValidation(String value) {
+    final formatError = _emailValidation(value);
+    if (formatError != null) return formatError;
+    return hasEmailPlusTag(value) ? primaryEmailRequiredMessage : null;
   }
 
   String? _usernameValidation(String value) {

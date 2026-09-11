@@ -11,6 +11,17 @@ type Input = {
   reflection?: string;
 };
 
+function emailAccountKey(email: string): string {
+  const normalized = email.trim().toLowerCase();
+  const at = normalized.lastIndexOf("@");
+  if (at <= 0) return normalized;
+
+  const localPart = normalized.slice(0, at);
+  const plus = localPart.indexOf("+");
+  const accountLocalPart = plus < 0 ? localPart : localPart.slice(0, plus);
+  return `${accountLocalPart}${normalized.slice(at)}`;
+}
+
 export default {
   fetch: withSupabase({ auth: "user" }, async (request, context) => {
     const userId = context.userClaims?.id;
@@ -195,30 +206,49 @@ export default {
             status: 400,
           });
         }
-        if (email === userEmail) {
+        if (email.slice(0, email.lastIndexOf("@")).includes("+")) {
+          return Response.json({
+            message: "Email addresses with '+' tags are not allowed. Enter the primary email address.",
+          }, { status: 400 });
+        }
+        if (emailAccountKey(email) === emailAccountKey(userEmail)) {
           return Response.json({ message: "You cannot invite yourself." }, {
             status: 400,
           });
         }
-        const { data: existing } = await admin.from("invitations").select("id")
-          .eq("session_id", session.id).eq("invitee_email", email)
-          .eq("status", "pending").maybeSingle();
+        const { data: pendingInvitations } = await admin.from("invitations")
+          .select("id,invitee_email")
+          .eq("session_id", session.id).eq("status", "pending");
+        const existing = pendingInvitations?.find((invitation: any) =>
+          typeof invitation.invitee_email === "string" &&
+          emailAccountKey(invitation.invitee_email) === emailAccountKey(email)
+        );
         if (existing) {
           return Response.json({
             message: "This tourist has already been invited.",
           }, { status: 409 });
         }
         let inviteeId: string | null = null;
+        let aliasedInviteeId: string | null = null;
         for (let page = 1; page <= 5 && !inviteeId; page++) {
           const { data } = await admin.auth.admin.listUsers({
             page,
             perPage: 200,
           });
-          inviteeId = data.users.find((user: any) =>
+          const exactUser = data.users.find((user: any) =>
             user.email?.toLowerCase() === email
-          )?.id ?? null;
+          );
+          if (exactUser) {
+            inviteeId = exactUser.id;
+          } else if (!aliasedInviteeId) {
+            aliasedInviteeId = data.users.find((user: any) =>
+              typeof user.email === "string" &&
+              emailAccountKey(user.email) === emailAccountKey(email)
+            )?.id ?? null;
+          }
           if (data.users.length < 200) break;
         }
+        inviteeId ??= aliasedInviteeId;
         const registered = Boolean(inviteeId);
         let emailSent = false;
         if (!inviteeId) {

@@ -22,6 +22,7 @@ abstract interface class IAuthenticationFacade implements Listenable {
 
   void togglePasswordVisibility();
   void validateEmail(String value);
+  void validateRegistrationEmail(String value);
   void validateResetEmail(String value);
   void validateSignInPassword(String value);
   void validateUsername(String value);

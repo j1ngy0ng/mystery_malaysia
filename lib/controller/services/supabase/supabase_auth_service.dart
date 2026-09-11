@@ -3,6 +3,15 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/app_config.dart';
 import '../errors/api_error.dart';
 
+const primaryEmailRequiredMessage =
+    "Email addresses with '+' tags are not allowed. Enter the primary email address.";
+
+bool hasEmailPlusTag(String email) {
+  final normalized = email.trim();
+  final at = normalized.lastIndexOf('@');
+  return at > 0 && normalized.substring(0, at).contains('+');
+}
+
 class SupabaseAuthService {
   SupabaseClient get _client => Supabase.instance.client;
 
@@ -48,6 +57,12 @@ class SupabaseAuthService {
       return false;
     }
     try {
+      if (hasEmailPlusTag(email)) {
+        throw const ApiError(
+          primaryEmailRequiredMessage,
+          code: 'email_plus_tag_not_allowed',
+        );
+      }
       if (await isEmailRegistered(email)) {
         throw const ApiError(
           'An account already uses this email. Sign in instead.',

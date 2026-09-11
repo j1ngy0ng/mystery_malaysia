@@ -59,8 +59,21 @@ class CollaborativeTravelController extends ChangeNotifier {
     });
   }
 
-  Future<bool> invite(String email) =>
-      _mutation({'action': 'invite', 'session_id': sessionId, 'email': email});
+  Future<bool> invite(String email) async {
+    final normalized = email.trim();
+    final at = normalized.lastIndexOf('@');
+    if (at > 0 && normalized.substring(0, at).contains('+')) {
+      error =
+          "Email addresses with '+' tags are not allowed. Enter the primary email address.";
+      notifyListeners();
+      return false;
+    }
+    return _mutation({
+      'action': 'invite',
+      'session_id': sessionId,
+      'email': normalized,
+    });
+  }
 
   Future<bool> respond(String invitationId, bool accept) => _mutation({
     'action': 'respond',
